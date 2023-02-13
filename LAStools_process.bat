@@ -10,10 +10,10 @@ set BUFFER=20
 ::set cores to be n-1 on your processing machine
 set CORES=11
 ::list of 
-set list= 22_096 22_292
+set list= 22_047_Fortress 22_081_Fortress 22_096 22_110_Fortress 22_118_CanRid 22_123_Fortress 22_144_Fortress 22_153_Fortress 22_179_Fortress 22_279_Fortress 22_292
 set local_path= Z:\lidar-processing
-set shp_name=ForestTower_clip
-set STEP=0.05
+set shp_name=FortRidgeSouth
+set STEP=0.01
 lastile -version
 pause
 
@@ -44,7 +44,7 @@ lassort -i 1_tiles\*.las ^
 rmdir 4_tiles_ground /s /q
 mkdir 4_tiles_ground
 lasground_new -i 3_tiles_sorted\tile*.las ^
-              -step %STEP% ^
+              -step 3 ^
               -extra_fine ^
               -spike 0.5 ^
               -spike_down 2.5 ^
@@ -55,7 +55,7 @@ lasmerge -i 4_tiles_ground\tile*.las ^
          -drop_withheld ^
          -o %local_path%\data\class_points\%%A_class.las -olas
 blast2dem -i %local_path%\data\class_points\%%A_class.las^
-          -step 1 -keep_class 2 -o %local_path%\data\dsm\DSM_%%A.tif
+          -step %STEP% -keep_class 2 -o %local_path%\data\dsm\DSM_%%A.tif
 rmdir 1_tiles /s /q
 rmdir 2_tiles_denoised /s /q
 rmdir 3_tiles_sorted /s /q

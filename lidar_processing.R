@@ -12,8 +12,8 @@ library(dplyr)
 ######################################################################
 #VARIABLES
 
-#name of shapefile to clip ROI #CanRidge.shp fortress_extent.shp FortressBasin.shp FortRidgeSouth.shp
-shp_name<-"CanRidge"
+#name of shapefile to clip ROI #CanRidge.shp fortress_extent.shp FortRidgeSouth.shp ForestTower_clip.sh
+shp_name<-"FortRidgeSouth"
 
 #bare ground file name
 bare_ground_las = "22_292.las"

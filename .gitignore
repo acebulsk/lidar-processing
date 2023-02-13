@@ -40,4 +40,8 @@ vignettes/*.pdf
 
 # Data
 *.las
+*.tfw
+*.ovr
+*.kml
+*.tif
 data/shp/
