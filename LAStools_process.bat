@@ -55,7 +55,7 @@ lasmerge -i 4_tiles_ground\tile*.las ^
          -drop_withheld ^
          -o %local_path%\data\class_points\%%A_class.las -olas
 blast2dem -i %local_path%\data\class_points\%%A_class.las^
-          -step %STEP% -keep_class 2 -o %local_path%\data\dsm\DSM_%%A.tif
+          -step %STEP% -utm 11U -keep_class 2 -o %local_path%\data\dsm\DSM_%%A.tif
 rmdir 1_tiles /s /q
 rmdir 2_tiles_denoised /s /q
 rmdir 3_tiles_sorted /s /q

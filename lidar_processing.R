@@ -151,4 +151,4 @@ errors<-survey %>% group_by(Identifier) %>% summarise(
 
 errors
 
-write.csv(errors, 'deliverables/error_summary.csv', row.names = F)
+#write.csv(errors, 'deliverables/error_summary.csv', row.names = F)
