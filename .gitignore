@@ -45,3 +45,4 @@ vignettes/*.pdf
 *.kml
 *.tif
 data/shp/
+prepost_data/shp/

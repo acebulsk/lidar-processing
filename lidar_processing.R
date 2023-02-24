@@ -8,12 +8,20 @@ library(raster)
 library(rgdal)
 library(plyr)
 library(dplyr)
+library(sf)
 
 ######################################################################
 #VARIABLES
 
+#NOTE: make sure nothing is in data/dsm folder when initiating script!!! (we should add a check to only include dsms that are input into the script aka. what is in data/point_cloud)
+
 #name of shapefile to clip ROI #CanRidge.shp fortress_extent.shp FortRidgeSouth.shp ForestTower_clip.sh
-shp_name<-"FortRidgeSouth"
+# make sure this isnt too small as the las clip function has weird behaviour we
+# handle this by doing a secondary clip in R
+shp_name<-"FT_initialClip"
+
+#subset clip area
+subset_clip <- read_sf('data/shp/FT_finalClip.shp')
 
 #bare ground file name
 bare_ground_las = "22_292.las"
@@ -22,10 +30,10 @@ bare_ground_las = "22_292.las"
 point_cloud_path = "data/point_cloud/"
 
 #resolution of output DEMs
-RES_STEP = "0.01"
+RES_STEP = "0.1"
 
 #location of field data (output from rover_snow_processing.R) 
-#survey<-read.csv('data/survey_data/survey_points_FT.csv')
+survey<-read.csv('data/survey_data/survey_points_FT.csv')
 
 ######################################################################
 #error metric functions
@@ -76,28 +84,39 @@ writeLines(txt, con = "LAStools_process.bat")
 #run LASTools code from R
 shell('LAStools_process.bat')
 
+
+
 #load generated DSM's to R
-tiffs<-list.files("data/dsm/", pattern="*.tif")
-DSM<-raster(paste("data/dsm/",tiffs[1], sep=""))
+#search for filenames put into raw data fodler (data/point_clouds) to create search list for dsm files
+tiffs <- list.files("data/point_cloud/", pattern="*.las$")
+tiffs<-gsub('las', 'tif', tiffs)
+DSM_stack<-raster(paste("data/dsm/",tiffs[1], sep=""))
+DSM_stack <- crop(DSM_stack, subset_clip)
+
 for(i in 2:length(tiffs)){
   DSM_temp<-raster(paste("data/dsm/",tiffs[i], sep=""))
-  DSM<-addLayer(DSM, DSM_temp)
+  DSM_temp<- crop(DSM_temp, subset_clip) 
+  DSM_stack<-addLayer(DSM_stack, DSM_temp)
 }
 
+
 #identify which layers are snow covered (ie not the bare layer)
-point_cloud_list = list.files(path = point_cloud_path)
+point_cloud_list = list.files(path = point_cloud_path, pattern="*.las$")
 bare_index = which(point_cloud_list == bare_ground_las)
 
 snow_index<-1:length(tiffs)
 snow_index<-snow_index[snow_index!=bare_index]
 
 #initialise snow depth raster stack
-SD<-DSM[[min(snow_index)]]-DSM[[bare_index]]
-names(SD)<-gsub("DSM","Hs",names(DSM[[min(snow_index)]]))
+SD<-DSM_stack[[min(snow_index)]]-DSM_stack[[bare_index]]
+names(SD)<-gsub("DSM","Hs",names(DSM_stack[[min(snow_index)]]))
+raster::writeRaster(SD_temp, paste0('data/Hs/', point_cloud_list[1], '.tif')) #output Hs rasters into data/Hs folder
 if(length(snow_index)>1){
   for(i in snow_index[2:length(snow_index)]){
-    SD_temp<-DSM[[i]]-DSM[[bare_index]]
-    names(SD_temp)<-gsub("DSM","Hs",names(DSM[[i]]))
+    print(i)
+    SD_temp<-DSM_stack[[i]]-DSM_stack[[bare_index]]
+    names(SD_temp)<-gsub("DSM","Hs",names(DSM_stack[[i]]))
+    raster::writeRaster(SD_temp, paste0('data/Hs/', point_cloud_list[i], '.tif')) #output Hs rasters into data/Hs folder
     SD<-addLayer(SD,SD_temp)
   }
 }
@@ -120,13 +139,13 @@ survey$z_soil[which(survey$z_type=='s')]<-survey$z[which(survey$z_type=='s')]-su
 
 #For loop to extract elevation data from UAV data corresponding to survey point data
 #call for bare ground assessment
-survey$DSM_z_soil<-extract(DSM[[bare_index]],SpatialPoints(cbind(survey$X_utm,  survey$Y_utm)))
+survey$DSM_z_soil<-extract(DSM_stack[[bare_index]],SpatialPoints(cbind(survey$X_utm,  survey$Y_utm)))
 #loop for snow surface assessment
 survey$DSM_z_snow<-NA
 for(i in snow_index){
-  gsub("DSM_", "",names(DSM)[i])
-  survey$DSM_z_snow[which(survey$Identifier==gsub("DSM_", "",names(DSM)[i]))]<- extract(DSM[[i]],SpatialPoints(cbind(survey$X_utm[which(survey$Identifier==gsub("DSM_", "",names(DSM)[i]))],  
-                                     survey$Y_utm[which(survey$Identifier==gsub("DSM_", "",names(DSM)[i]))])))
+  gsub("DSM_", "",names(DSM_stack)[i])
+  survey$DSM_z_snow[which(survey$Identifier==gsub("DSM_", "",names(DSM_stack)[i]))]<- extract(DSM_stack[[i]],SpatialPoints(cbind(survey$X_utm[which(survey$Identifier==gsub("DSM_", "",names(DSM_stack)[i]))],  
+                                     survey$Y_utm[which(survey$Identifier==gsub("DSM_", "",names(DSM_stack)[i]))])))
 }
 #loop for snow depth assessment
 survey$Hs_est<-NA
@@ -151,4 +170,4 @@ errors<-survey %>% group_by(Identifier) %>% summarise(
 
 errors
 
-#write.csv(errors, 'deliverables/error_summary.csv', row.names = F)
+write.csv(errors, 'deliverables/error_summary.csv', row.names = F)

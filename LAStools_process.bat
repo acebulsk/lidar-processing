@@ -8,12 +8,12 @@ set TILE_SIZE=75
 ::Ensure buffer size is at least 1x if not 2x the step size
 set BUFFER=20
 ::set cores to be n-1 on your processing machine
-set CORES=11
+set CORES=3
 ::list of 
-set list= 22_047_Fortress 22_081_Fortress 22_096 22_110_Fortress 22_118_CanRid 22_123_Fortress 22_144_Fortress 22_153_Fortress 22_179_Fortress 22_279_Fortress 22_292
+set list= 22_140 22_153_FT 22_292
 set local_path= Z:\lidar-processing
-set shp_name=FortRidgeSouth
-set STEP=0.01
+set shp_name=ForestTower_clip
+set STEP=0.1
 lastile -version
 pause
 
@@ -55,7 +55,7 @@ lasmerge -i 4_tiles_ground\tile*.las ^
          -drop_withheld ^
          -o %local_path%\data\class_points\%%A_class.las -olas
 blast2dem -i %local_path%\data\class_points\%%A_class.las^
-          -step %STEP% -utm 11U -keep_class 2 -o %local_path%\data\dsm\DSM_%%A.tif
+          -step %STEP% -keep_class 2 -o %local_path%\data\dsm\%%A.tif
 rmdir 1_tiles /s /q
 rmdir 2_tiles_denoised /s /q
 rmdir 3_tiles_sorted /s /q
