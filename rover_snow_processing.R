@@ -61,13 +61,17 @@ snow_data <- readRDS('data/survey_data/FFR_snow_survey_db_qaqc_fsd.rds') %>%
     yy_ddd = paste0(format(datetime, "%y"), "_", format(datetime, "%j"))
   )
 
-survey_data$lat_dd = angle2dec(survey_data$Latitude)
-survey_data$lon_dd = angle2dec(survey_data$Longitude)*-1
+options(max.print=999999)
 
 survey_data <- left_join(rover_pts_df, 
                          snow_data, 
                          by = c("yy_ddd", "Point_id"),
-                         multiple = "all") %>% 
+                         multiple = "all")
+
+survey_data$lat_dd = angle2dec(survey_data$lat_dms)
+survey_data$lon_dd = angle2dec(survey_data$lon_dms)*-1
+
+survey_data <- survey_data %>% 
   filter(is.na(depth) == F) %>% 
   select(
     Identifier = yy_ddd,
