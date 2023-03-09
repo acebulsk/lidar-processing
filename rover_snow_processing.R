@@ -2,6 +2,8 @@
 
 library(dplyr)
 
+snow_survey_path <- 'prepost_data/survey_data/fresh_snow_densities_db.csv'
+
 # functions
 angle2dec <- function(angle) {
   angle <- as.character(angle)
@@ -52,7 +54,8 @@ rover_pts_df <- do.call(rbind, rover_pts_list) %>%
   # need to remove bad pt ids 
   filter(Point_id < high_lim_gnss_id)
 
-snow_data <- readRDS('data/survey_data/FFR_snow_survey_db_qaqc_fsd.rds') %>%
+snow_data <- read.csv(snow_survey_path) %>%
+  mutate(datetime = as.POSIXct(datetime)) %>% 
   select(datetime,
          Point_id = gps_id,
          depth) %>% 
@@ -71,7 +74,7 @@ survey_data <- left_join(rover_pts_df,
 survey_data$lat_dd = angle2dec(survey_data$lat_dms)
 survey_data$lon_dd = angle2dec(survey_data$lon_dms)*-1
 
-survey_data <- survey_data %>% 
+survey_data_out <- survey_data %>% 
   filter(is.na(depth) == F) %>% 
   select(
     Identifier = yy_ddd,
@@ -81,7 +84,7 @@ survey_data <- survey_data %>%
     z = ele_m,
     Hs = depth
   ) %>% 
-  mutate(Hs = Hs * 0.01)
+  mutate(Hs = Hs * 0.001)
 
 
-write.csv(survey_data, 'data/survey_data/survey_points_FT.csv', row.names = F) 
+write.csv(survey_data_out, 'data/survey_data/survey_points_FT.csv', row.names = F) 
