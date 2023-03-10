@@ -3,6 +3,7 @@
 library(dplyr)
 
 snow_survey_path <- 'prepost_data/survey_data/fresh_snow_densities_db.csv'
+survey_data_out_path <- 'prepost_data/survey_data/survey_points_FT.csv'
 
 # functions
 angle2dec <- function(angle) {
@@ -87,4 +88,4 @@ survey_data_out <- survey_data %>%
   mutate(Hs = Hs * 0.001)
 
 
-write.csv(survey_data_out, 'data/survey_data/survey_points_FT.csv', row.names = F) 
+write.csv(survey_data_out, survey_data_out_path, row.names = F) 
