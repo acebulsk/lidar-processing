@@ -23,10 +23,12 @@ shp_name<-"FT_initialClip"
 subset_clip <- read_sf('data/shp/FT_finalClip.shp')
 
 #pre snowfall file name
-pre_snow_las = "23_026.las"
+pre_snow_las = "23_026_FT.las"
 
 #post snowfall file name
-post_snow_las = "23_027.las"
+post_snow_las = "23_027_FT.las"
+
+post_id <- gsub("_FT.las", "", post_snow_las)
 
 #output Hs filename
 file_out = "23_026_027.tif"
@@ -76,7 +78,7 @@ files<-tools::file_path_sans_ext(files)
 #LAStools processing produces a DEM
 #processes are organised in LAStools_process.bat file.  
 #update lastools .bat script
-txt<-readLines('LAStools_process.bat')
+txt<-readLines('LAStools_process_prepost.bat')
 #update list to process
 txt[[13]]<-paste(c("set list=",files),collapse=" ")
 #update working directory
@@ -123,7 +125,7 @@ if(length(post_index)>1){
 }
 
 #output Hs rasters into prepost_data/Hs folder
-raster::writeRaster(SD, paste0('prepost_data/Hs/', file_out))
+raster::writeRaster(SD, paste0('prepost_data/Hs/', file_out), overwrite = T)
 
 
 #Convert lat long to UTM
@@ -147,17 +149,18 @@ survey$z_soil[which(survey$z_type=='s')]<-survey$z[which(survey$z_type=='s')]-su
 survey$DSM_z_soil<-extract(DSM_stack[[pre_index]],SpatialPoints(cbind(survey$X_utm,  survey$Y_utm)))
 #loop for snow surface assessment
 survey$DSM_z_snow<-NA
-for(i in post_index){
-  gsub("DSM_", "",names(DSM_stack)[i])
-  survey$DSM_z_snow[which(survey$Identifier==gsub("DSM_", "",names(DSM_stack)[i]))]<- extract(DSM_stack[[i]],SpatialPoints(cbind(survey$X_utm[which(survey$Identifier==gsub("DSM_", "",names(DSM_stack)[i]))],  
-                                                                                                                     survey$Y_utm[which(survey$Identifier==gsub("DSM_", "",names(DSM_stack)[i]))])))
-}
+
+# do gnss to lidar raster surface elevation comparison
+# z_snow is rover 
+# DSM_z_snow is lidar raster estimate 
+survey$DSM_z_snow[which(survey$Identifier==post_id)]<- extract(DSM_stack[[2]],SpatialPoints(cbind(survey$X_utm[which(survey$Identifier==post_id)],  
+                                                                                                                     survey$Y_utm[which(survey$Identifier==post_id)])))
 #loop for snow depth assessment
 survey$Hs_est<-NA
-for(i in names(SD)){
-  survey$Hs_est[which(survey$Identifier==gsub("Hs_", "",i))]<- extract(SD[[i]],SpatialPoints(cbind(survey$X_utm[which(survey$Identifier==gsub("Hs_", "",i))],  
-                                                                                                   survey$Y_utm[which(survey$Identifier==gsub("Hs_", "",i))])))
-}
+
+survey$Hs_est[which(survey$Identifier==post_id)]<- extract(SD,SpatialPoints(cbind(survey$X_utm[which(survey$Identifier==post_id)],  
+                                                                                                   survey$Y_utm[which(survey$Identifier==post_id)])))
+
 
 #error summarization
 errors<-survey %>% group_by(Identifier) %>% summarise(
@@ -175,4 +178,4 @@ errors<-survey %>% group_by(Identifier) %>% summarise(
 
 errors
 
-write.csv(errors, 'deliverables/error_summary.csv', row.names = F)
+write.csv(errors, 'deliverables/error_summary_pre_post.csv', row.names = F)
