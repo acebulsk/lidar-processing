@@ -1,37 +1,34 @@
-######################################################
 #Lidar processing to generate DSM and snow depth maps from UAV-lidar
 #Phillip Harder
 #January  27, 2023
 #Edited by Maddie Harasyn to only compare pre- and post- snowfall DSM layers
+rm(list = ls())
 
 #load libraries
+library(dplyr)
+library(purrr)
 library(raster)
 library(rgdal)
-library(plyr)
-library(dplyr)
 library(sf)
 
-######################################################################
-#VARIABLES
 
-#name of shapefile to clip ROI #CanRidge.shp fortress_extent.shp FortRidgeSouth.shp ForestTower_clip.sh
+# variables ###########################################################
+
+
+#pre snowfall file name
+pre_snow_las = "22_137_FT.las"
+
+#post snowfall file name
+post_snow_las = "22_140_FT.las"
+
+#other variables ######################################################
+#name of shapefile to clip ROI
 # make sure this isnt too small as the las clip function has weird behaviour we
 # handle this by doing a secondary clip in R
 shp_name<-"FT_initialClip"
 
 #subset clip area
-subset_clip <- read_sf('data/shp/FT_finalClip.shp')
-
-#pre snowfall file name
-pre_snow_las = "23_026_FT.las"
-
-#post snowfall file name
-post_snow_las = "23_027_FT.las"
-
-post_id <- gsub("_FT.las", "", post_snow_las)
-
-#output Hs filename
-file_out = "23_026_027.tif"
+subset_clip <- read_sf('prepost_data/shp/FT_finalClip.shp')
 
 #path to raw point clouds
 point_cloud_path = "prepost_data/point_cloud/"
@@ -42,7 +39,11 @@ RES_STEP = "0.1"
 #location of field data (output from rover_snow_processing.R) 
 survey<-read.csv('prepost_data/survey_data/survey_points_FT.csv')
 
-######################################################################
+#output Hs_insitu filename
+file_out = paste0(substr(pre_snow_las, 1,6), "_", substr(post_snow_las, 4,6), ".tif")
+
+
+# functions ##########################################################
 #error metric functions
 #Root Mean Square Error
 RMSE <- function(obs, est) {
@@ -60,7 +61,7 @@ r2fun <- function(obs, pred){
   ((length(pred[i])*(sum(pred[i]*obs[i]))-sum(obs[i])*sum(pred[i]))/
       (((length(pred[i])*sum(obs[i]^2)-sum(obs[i])^2)^0.5)*((length(pred[i])*sum(pred[i]^2)-sum(pred[i])^2)^0.5)))^2
 }
-###############################################
+
 #convert long lat to UTM function
 LongLatToUTM<-function(x,y,zone){
   xy <- data.frame(ID = 1:length(x), X = x, Y = y)
@@ -69,33 +70,37 @@ LongLatToUTM<-function(x,y,zone){
   res <- spTransform(xy, CRS(paste("+proj=utm +zone=",zone," ellps=WGS84",sep='')))
   return(as.data.frame(res))
 }
-##################################################
 
 #list point cloud .las files
-files<-list.files("prepost_data/point_cloud/", pattern="*.las",full.names = FALSE)
+#modified to only input pre and post files we want into LAS tools
+files <- c(pre_snow_las, post_snow_las)
 files<-tools::file_path_sans_ext(files)
 
-#LAStools processing produces a DEM
-#processes are organised in LAStools_process.bat file.  
-#update lastools .bat script
-txt<-readLines('LAStools_process_prepost.bat')
-#update list to process
-txt[[13]]<-paste(c("set list=",files),collapse=" ")
-#update working directory
-txt[[14]]<-paste(c("set local_path=",gsub("/","\\\\",getwd())),collapse=" ")
-#update clipping area with name of correct .shp file
-txt[[15]]<-paste(c("set shp_name=", shp_name),collapse="")
-#update resolution of DEMs
-txt[[16]]<-paste(c("set STEP=", RES_STEP),collapse="")
-writeLines(txt, con = "LAStools_process.bat")
-#run LASTools code from R
-shell('LAStools_process.bat')
+# LAS TOOLS ##########################################################
+# AVOID RUNNING IF DATA ALREADY PROCESSED!!
+
+# #LAStools processing produces a DEM
+# #processes are organised in LAStools_process.bat file.  
+# #update lastools .bat script
+# txt<-readLines('LAStools_process_prepost.bat')
+# #update list to process
+# txt[[13]]<-paste(c("set list=",files),collapse=" ")
+# #update working directory
+# txt[[14]]<-paste(c("set local_path=",gsub("/","\\\\",getwd())),collapse=" ")
+# #update clipping area with name of correct .shp file
+# txt[[15]]<-paste(c("set shp_name=", shp_name),collapse="")
+# #update resolution of DEMs
+# txt[[16]]<-paste(c("set STEP=", RES_STEP),collapse="")
+# writeLines(txt, con = "LAStools_process.bat")
+# #run LASTools code from R
+# shell('LAStools_process.bat')
 
 
+# main script ######################################################
 #load generated DSM's to R
 #search for filenames put into raw data fodler (prepost_data/point_clouds) to create search list for dsm files
-tiffs <- list.files("prepost_data/point_cloud/", pattern="*.las$")
-tiffs<-gsub('las', 'tif', tiffs)
+#modified so only dates of interested are pulled in, not ALL las files in 'point_cloud' folder
+tiffs<-paste0(files, '.tif')
 DSM_stack<-raster(paste("prepost_data/dsm/",tiffs[1], sep=""))
 DSM_stack <- crop(DSM_stack, subset_clip)
 
@@ -106,25 +111,14 @@ for(i in 2:length(tiffs)){
 }
 
 #identify which layers are snow covered (ie not the bare layer)
-point_cloud_list = list.files(path = point_cloud_path, pattern="*.las$")
-pre_index = which(point_cloud_list == pre_snow_las)
-
-post_index<-1:length(tiffs)
-post_index<-post_index[post_index!=pre_index]
+pre_index = 1
+post_index = 2
 
 
 #initialise snow depth raster stack
-SD<-DSM_stack[[min(post_index)]]-DSM_stack[[pre_index]]
-names(SD)<-gsub("DSM","Hs",names(DSM_stack[[min(post_index)]]))
-if(length(post_index)>1){
-  for(i in post_index[2:length(post_index)]){
-    SD_temp<-DSM_stack[[i]]-DSM_stack[[pre_index]]
-    names(SD_temp)<-gsub("DSM_stack","Hs",names(DSM_stack[[i]]))
-    SD<-addLayer(SD,SD_temp)
-  }
-}
+SD<-DSM_stack[[post_index]]-DSM_stack[[pre_index]]
 
-#output Hs rasters into prepost_data/Hs folder
+#output Hs_insitu rasters into prepost_data/Hs folder
 raster::writeRaster(SD, paste0('prepost_data/Hs/', file_out), overwrite = T)
 
 
@@ -133,49 +127,53 @@ survey$X_utm<-NA
 survey$Y_utm<-NA
 survey$zone<-11
 for(i in 1:length(survey$Identifier)){
-  survey[i,7:8]<-LongLatToUTM(survey$Longitude[i],survey$Latitude[i],survey$zone[i])[2:3]  
+  survey[i,c('X_utm', 'Y_utm')]<-LongLatToUTM(survey$Longitude[i],survey$Latitude[i],survey$zone[i])[2:3]  
 }
 
 
 #compute snow surface and ground surface elevations
-survey$z_type<-'g'
-survey$z_type[which(!is.na(survey$Hs)|survey$Hs!=0)]<-'s'
-survey$z_snow<-survey$z
-survey$z_soil<-survey$z
-survey$z_soil[which(survey$z_type=='s')]<-survey$z[which(survey$z_type=='s')]-survey$Hs[which(survey$z_type=='s')]
+survey$gnss_z_snow<-survey$z
+
 
 #For loop to extract elevation data from UAV data corresponding to survey point data
 #call for bare ground assessment
-survey$DSM_z_soil<-extract(DSM_stack[[pre_index]],SpatialPoints(cbind(survey$X_utm,  survey$Y_utm)))
+#survey$DSM_z_soil<-raster::extract(DSM_stack[[pre_index]],SpatialPoints(cbind(survey$X_utm,  survey$Y_utm)))
 #loop for snow surface assessment
-survey$DSM_z_snow<-NA
+survey$lidar_dsm_z_snow<-NA
 
 # do gnss to lidar raster surface elevation comparison
-# z_snow is rover 
-# DSM_z_snow is lidar raster estimate 
-survey$DSM_z_snow[which(survey$Identifier==post_id)]<- extract(DSM_stack[[2]],SpatialPoints(cbind(survey$X_utm[which(survey$Identifier==post_id)],  
+# gnss_z_snow is rover 
+# lidar_dsm_z_snow is lidar raster estimate 
+post_id <- gsub("_FT.las", "", post_snow_las)
+survey$lidar_dsm_z_snow[which(survey$Identifier==post_id)]<- raster::extract(DSM_stack[[2]],SpatialPoints(cbind(survey$X_utm[which(survey$Identifier==post_id)],  
                                                                                                                      survey$Y_utm[which(survey$Identifier==post_id)])))
 #loop for snow depth assessment
-survey$Hs_est<-NA
+survey$Hs_lidar<-NA
 
-survey$Hs_est[which(survey$Identifier==post_id)]<- extract(SD,SpatialPoints(cbind(survey$X_utm[which(survey$Identifier==post_id)],  
+survey$Hs_lidar[which(survey$Identifier==post_id)]<- raster::extract(SD,SpatialPoints(cbind(survey$X_utm[which(survey$Identifier==post_id)],  
                                                                                                    survey$Y_utm[which(survey$Identifier==post_id)])))
 
 
 #error summarization
-errors<-survey %>% group_by(Identifier) %>% summarise(
-  Hs_RMSE=RMSE(Hs,Hs_est), #RMSE of survey vs lidar snow depth
-  Hs_Bias=bias(Hs,Hs_est), #Bias of survey vs lidar snow depth
-  Hs_r2=r2fun(Hs,Hs_est), #R2 of survey vs lidar snow depth
-  z_snow_RMSE=RMSE(z_snow,DSM_z_snow),#RMSE of survey vs lidar snow surface elevation 
-  z_snow_Bias=bias(z_snow,DSM_z_snow), #Bias of survey vs lidar snow surface elevation 
-  z_snow_r2=r2fun(z_snow,DSM_z_snow), #Bias of survey vs lidar snow surface elevation 
-  z_bare_RMSE=RMSE(z_soil,DSM_z_soil),#RMSE of survey vs lidar bare surface elevation (assumes all survey points have snow depth observations)
-  z_bare_Bias=bias(z_soil,DSM_z_soil), #Bias of survey vs lidar bare surface elevation (assumes all survey points have snow depth observations)
-  z_bare_r2=r2fun(z_soil,DSM_z_soil)#R2 of survey vs lidar bare surface elevation (assumes all survey points have snow depth observations)
-  
+survey_select<-survey %>% 
+  dplyr::filter(Identifier == post_id)
+write.csv(survey_select, paste0('prepost_data/error_summary/survey_data_pre_post_', post_id, '.csv'))
+
+errors <- survey_select %>% 
+  dplyr::group_by(Identifier) %>% dplyr::summarise(
+  lidar_insitu_Hs_RMSE=RMSE(Hs_insitu,Hs_lidar), #RMSE of survey vs lidar snow depth
+  lidar_insitu_Hs_Bias=bias(Hs_insitu,Hs_lidar), #Bias of survey vs lidar snow depth
+  lidar_insitu_Hs_r2=r2fun(Hs_insitu,Hs_lidar), #R2 of survey vs lidar snow depth
+  lidar_gnss_z_snow_RMSE=RMSE(gnss_z_snow,lidar_dsm_z_snow),#RMSE of survey vs lidar snow surface elevation 
+  lidar_gnss_z_snow_Bias=bias(gnss_z_snow,lidar_dsm_z_snow), #Bias of survey vs lidar snow surface elevation 
+  lidar_gnss_z_snow_r2=r2fun(gnss_z_snow,lidar_dsm_z_snow), #Bias of survey vs lidar snow surface elevation 
+
 )
 
 errors
 
-write.csv(errors, 'deliverables/error_summary_pre_post.csv', row.names = F)
+write.csv(errors, paste0('prepost_data/error_summary/error_table_pre_post_', post_id, '.csv'))
+
+error_tbl_files <- list.files('prepost_data/error_summary/', pattern = 'error_table*', full.names = T)
+all_err_tbls <- purrr::map_dfr(error_tbl_files, read.csv)
+write.csv(all_err_tbls, 'prepost_data/error_summary/all_error_tbls.csv', row.names = F)

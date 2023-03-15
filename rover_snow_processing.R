@@ -1,11 +1,17 @@
 # combining GNSS rover txt files over all survey days
+rm(list = ls())
 
 library(dplyr)
 
-snow_survey_path <- 'prepost_data/survey_data/fresh_snow_densities_db.csv'
-survey_data_out_path <- 'prepost_data/survey_data/survey_points_FT.csv'
+# variables #######################################################
 
-# functions
+snow_survey_path <- 'data/survey_data/FFR_snow_survey_db_qaqc_fsd.csv'
+survey_data_out_path <- 'data/survey_data/survey_points_FT.csv'
+
+#factor to convert in situ snow depth to meters (lidar snow depth unit)
+Hs_conv_fact = 0.01
+
+# functions #######################################################
 angle2dec <- function(angle) {
   angle <- as.character(angle)
   x <- do.call(rbind, strsplit(angle, split=' '))
@@ -39,53 +45,59 @@ surv_dirs <- surv_dirs[!surv_dirs %in% no_data_days]
 rover_pts_list <- lapply(surv_dirs, read.delim, header = F)
 
 rover_pts_df <- do.call(rbind, rover_pts_list) %>% 
-  select(c(1:5, 10)) %>% 
-  rename(Point_id = V1,
+  dplyr::select(c(1:5, 10)) %>% 
+  dplyr::rename(GNSS_point_id = V1,
          point_type = V2,
          lat_dms = V3,
          lon_dms = V4,
          ele_m = V5,
          datetime = V10) %>%
-  filter(point_type == fixed_solution,
-         !Point_id %in% bad_gnss_ids) %>% 
-  mutate(Point_id = gsub('GS', x = Point_id, ''),
-         Point_id = floor(as.numeric(Point_id)),
+  dplyr::filter(point_type == fixed_solution,
+         !GNSS_point_id %in% bad_gnss_ids) %>% 
+  dplyr::mutate(GNSS_point_id = gsub('GS', x = GNSS_point_id, ''),
+         GNSS_point_id = floor(as.numeric(GNSS_point_id)),
          datetime = as.POSIXct(datetime, format = '%m/%d/%Y %H:%M:%OS'),
          yy_ddd = paste0(format(datetime, "%y"), "_", format(datetime, "%j"))) %>% 
   # need to remove bad pt ids 
-  filter(Point_id < high_lim_gnss_id)
+  dplyr::filter(GNSS_point_id < high_lim_gnss_id)
 
 snow_data <- read.csv(snow_survey_path) %>%
   mutate(datetime = as.POSIXct(datetime)) %>% 
-  select(datetime,
-         Point_id = gps_id,
+  dplyr::select(datetime,
+         GNSS_point_id = gps_id,
+         num,
+         canopy,
          depth) %>% 
-  filter(is.na(Point_id) != T) %>% 
-  mutate(
+  dplyr::filter(is.na(GNSS_point_id) != T) %>% 
+  dplyr::mutate(
     yy_ddd = paste0(format(datetime, "%y"), "_", format(datetime, "%j"))
   )
 
 options(max.print=999999)
 
-survey_data <- left_join(rover_pts_df, 
+survey_data <- dplyr::left_join(rover_pts_df, 
                          snow_data, 
-                         by = c("yy_ddd", "Point_id"),
+                         by = c("yy_ddd", "GNSS_point_id"),
                          multiple = "all")
 
 survey_data$lat_dd = angle2dec(survey_data$lat_dms)
 survey_data$lon_dd = angle2dec(survey_data$lon_dms)*-1
 
 survey_data_out <- survey_data %>% 
-  filter(is.na(depth) == F) %>% 
-  select(
+  dplyr::filter(is.na(depth) == F) %>% 
+  dplyr::select(
     Identifier = yy_ddd,
-    Point_id = Point_id,
+    GNSS_point_id = GNSS_point_id,
     Latitude = lat_dd,
     Longitude = lon_dd,
+    surv_id = num,
+    canopy,
     z = ele_m,
-    Hs = depth
+    Hs_insitu = depth
   ) %>% 
-  mutate(Hs = Hs * 0.001)
+  mutate(Hs_insitu = floor(as.numeric(Hs_insitu)),
+         Hs_insitu = Hs_insitu * Hs_conv_fact)
 
 
 write.csv(survey_data_out, survey_data_out_path, row.names = F) 
+
