@@ -1,0 +1,89 @@
+data aquired: 11/23/2018 -- Pomeroy Acreage
+contributors: Dong, Cob
+M600 w/ lidar
+Dragonfly w/ thermal
+GPS (Leica)
+ILRIS
+
+GWF data server: \\datastore\floodwave\(SWSL)
+remote processor: "snowstorm"
+
+GPS PPP correction (Dong, 11/23/18)
+	open "Infinity" -- Leica proprietary software
+		import Leica GPS data (based on time and size. 2nd file typically, larger)
+		export as RINEX (want .18o file, big file)
+	Correct GPS data (precice point positioning)
+		CSRS-PPP (https://webapp.geod.nrcan.gc.ca/geod/tools-outils/ppp.php?locale=en) (google nrcan)
+		Options: Static, ITRF
+		correct GPS surevey point data in infinity
+
+M600 data importing and processing notes:
+	Flight path processing (POSPac)
+		open PosPac, new default project
+		double-click on Mission (left pannel)
+			change name to date
+		save project  (ex. 10Oct)
+
+		import RINEX (.18o)
+			import based data(07/Base)
+			correct Northing/Easting
+			
+		for each trajectory
+			ignore 1st data file in series (ground test)
+			input trajectory data off UAV (09 (or whichever sensor)/02/02/INS-GPS_1)
+				omit "unknown" and "base data" files
+				rover antenna type -- Antcom G5ANT2AT1
+			coordinate manager (right click on base station child)
+				correct coordinates (lat/lons and elevation from PPP)
+				apply changes, close
+			right click base station -- "set base station" -- ok
+			project settings
+				GNSS -> lever-arm mounting angle -> standard deviation -> 0.030 (lowered for antenna correction)
+			GNSS-Inertial Processer
+				make sure GNSS Mode: In-Fusion Single Base, wl base station assigned
+			Save project
+
+			Manually transport trjectory files to lidar data folders from PosProc project folder (Docs/POSPac UAV/xxx/yyy/yyy/Proc) to (09/Scanner/project/05_INS_GPS_PROC/01)
+				sbet
+				pinkaru
+				smrmsg
+
+	Lidar processing in RiProcess
+		open riprocess project in "scanner" folder
+			take note of projection (want WGS84 ex. NAD83/Geocentric)	
+		[Double-click trajectory
+			select sbet file
+		Trajectories -> add
+			import sbet file (correct to current date)]
+		Remove records which are outside trajectory time frame
+		Records -> add all flights (exclude ground test) (??? what does this mean?)
+		
+		Assign devices to all (only for camera data wizard)
+			ensure trajectories correspond to correct records
+		(repeat above for all paths within project area as desired, then use Project Merge Wizard)
+		Data processing wizard
+			Tasks 2, 3, & 4 
+			check "remove existing tesks..."
+		RiPrecision -> adjust all
+			processing shows up under "tasks & servers"
+		(camera data wizard, if needed... but better to use pixl4d)
+
+		add views (click and drag to add scans, trajectories, etc.)
+		export point cloud data
+			prop(?) WGS84 UTM Northzone 14
+		EXPORT POINT CLOUD (RIGHT CLICK RECORDS)
+		coordinate system: WGS84 (always) (on export)
+
+		If we want to merge multile flights -> project merge wizard		
+
+processing tools:
+OSGeo4W Shell (shell program for geo tools like PDAL)
+PDAL (pdal.io, command line/SHELL) (useful for transfroming  coordinate system (ex. UTM xxx) take note of EPSG code)
+	look through online tutorials for tanslation/reprojection
+LAStool (command line interface, can use in arcGIS/QGIS) (has limitations with big files in free version)
+
+lidR (R package) (more control of functions, struggles with large files)
+
+
+NAD83 (Riprocess default)
+WGS84 (GWF)

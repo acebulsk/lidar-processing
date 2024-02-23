@@ -2,6 +2,7 @@
 #Phillip Harder
 #January  27, 2023
 #Edited by Maddie Harasyn to only compare pre- and post- snowfall DSM layers
+#More edits by alex do mod for linux processing
 rm(list = ls())
 
 #load libraries
@@ -16,10 +17,10 @@ library(sf)
 
 
 #pre snowfall file name
-pre_snow_las = "22_137_FT.las"
+pre_snow_las = "23_072_FT.las"
 
 #post snowfall file name
-post_snow_las = "22_140_FT.las"
+post_snow_las = "23_073_FT.las"
 
 #other variables ######################################################
 #name of shapefile to clip ROI
@@ -31,7 +32,7 @@ shp_name<-"FT_initialClip"
 subset_clip <- read_sf('prepost_data/shp/FT_finalClip.shp')
 
 #path to raw point clouds
-point_cloud_path = "prepost_data/point_cloud/"
+point_cloud_path = "/media/alex/phd-data/local-usask/field-downloads/lidar-data/pointclouds/"
 
 #resolution of output DEMs
 RES_STEP = "0.1"
@@ -79,21 +80,21 @@ files<-tools::file_path_sans_ext(files)
 # LAS TOOLS ##########################################################
 # AVOID RUNNING IF DATA ALREADY PROCESSED!!
 
-# #LAStools processing produces a DEM
-# #processes are organised in LAStools_process.bat file.  
-# #update lastools .bat script
-# txt<-readLines('LAStools_process_prepost.bat')
-# #update list to process
-# txt[[13]]<-paste(c("set list=",files),collapse=" ")
-# #update working directory
-# txt[[14]]<-paste(c("set local_path=",gsub("/","\\\\",getwd())),collapse=" ")
-# #update clipping area with name of correct .shp file
-# txt[[15]]<-paste(c("set shp_name=", shp_name),collapse="")
-# #update resolution of DEMs
-# txt[[16]]<-paste(c("set STEP=", RES_STEP),collapse="")
-# writeLines(txt, con = "LAStools_process.bat")
-# #run LASTools code from R
-# shell('LAStools_process.bat')
+#LAStools processing produces a DEM
+#processes are organised in LAStools_process.bat file.
+#update lastools .bat script
+txt<-readLines('LAStools_process_prepost.bat')
+#update list to process
+txt[[13]]<-paste(c("set list=",files),collapse=" ")
+#update working directory
+txt[[14]]<-paste(c("set local_path=",gsub("/","\\\\",getwd())),collapse=" ")
+#update clipping area with name of correct .shp file
+txt[[15]]<-paste(c("set shp_name=", shp_name),collapse="")
+#update resolution of DEMs
+txt[[16]]<-paste(c("set STEP=", RES_STEP),collapse="")
+writeLines(txt, con = "LAStools_process.bat")
+#run LASTools code from R
+shell('LAStools_process.bat')
 
 
 # main script ######################################################
@@ -119,7 +120,7 @@ post_index = 2
 SD<-DSM_stack[[post_index]]-DSM_stack[[pre_index]]
 
 #output Hs_insitu rasters into prepost_data/Hs folder
-raster::writeRaster(SD, paste0('prepost_data/Hs/', file_out), overwrite = T)
+#raster::writeRaster(SD, paste0('prepost_data/Hs/', file_out), overwrite = T)
 
 
 #Convert lat long to UTM

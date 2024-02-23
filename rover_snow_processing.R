@@ -5,11 +5,18 @@ library(dplyr)
 
 # variables #######################################################
 
-snow_survey_path <- 'data/survey_data/FFR_snow_survey_db_qaqc_fsd.csv'
-survey_data_out_path <- 'data/survey_data/survey_points_FT.csv'
+# UNCOMMENT PROPER DATASET/OUTPUT LOCATION TO USE
+
+# paths for bare ground survey data
+# snow_survey_path <- 'data/survey_data/FFR_snow_survey_db_qaqc_fsd.csv'
+# survey_data_out_path <- 'data/survey_data/survey_points_FT.csv'
+
+ # paths for prepost survey data
+# snow_survey_path <- 'prepost_data/survey_data/fresh_snow_densities_with_ground_partials.csv'
+# survey_data_out_path <- 'prepost_data/survey_data/survey_points_FT.csv'
 
 #factor to convert in situ snow depth to meters (lidar snow depth unit)
-Hs_conv_fact = 0.01
+Hs_conv_fact = 0.001
 
 # functions #######################################################
 angle2dec <- function(angle) {
@@ -37,6 +44,8 @@ surv_dirs <- paste0("F:/Processing/", surv_days, "_processing/", surv_days, "_c/
 no_data_days <- c(
   # no rov pts on this day as was bare ground
   "F:/Processing/22_292_processing/22_292_c/22_292/Exported Data/22_292.txt",
+  # bad in situ data
+  "F:/Processing/22_068_processing/22_068_c/22_068/Exported Data/22_068.txt",
   # no rtk solution on rov pts , drone dat seems ok 
   "F:/Processing/22_168_processing/22_168_c/22_168/Exported Data/22_168.txt")
 
@@ -65,6 +74,7 @@ snow_data <- read.csv(snow_survey_path) %>%
   mutate(datetime = as.POSIXct(datetime)) %>% 
   dplyr::select(datetime,
          GNSS_point_id = gps_id,
+         transect,
          num,
          canopy,
          depth) %>% 
@@ -87,14 +97,17 @@ survey_data_out <- survey_data %>%
   dplyr::filter(is.na(depth) == F) %>% 
   dplyr::select(
     Identifier = yy_ddd,
+    datetime = datetime.x,
     GNSS_point_id = GNSS_point_id,
     Latitude = lat_dd,
     Longitude = lon_dd,
+    transect,
     surv_id = num,
     canopy,
     z = ele_m,
     Hs_insitu = depth
   ) %>% 
+  mutate(datetime = as.Date(datetime, format="%Y-%m-%d")) %>% 
   mutate(Hs_insitu = floor(as.numeric(Hs_insitu)),
          Hs_insitu = Hs_insitu * Hs_conv_fact)
 
