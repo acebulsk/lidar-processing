@@ -10,28 +10,22 @@ set BUFFER=20
 ::set cores to be n-1 on your processing machine
 set CORES=3
 ::list of 
-set list= 22_137
+set list= 23_072_FT
 set local_path= Z:\lidar-processing
 set shp_name=FT_initialClip
 set STEP=0.1
-set THINSTEP=0.2
 lastile -version
 pause
 
 FOR %%A IN (%list%) DO (
-lasclip -i %local_path%\data\point_cloud\%%A.las -poly %local_path%\data\shp\%shp_name%.shp -o %local_path%\data\clipped\%%A_clip.las -v
+lasclip -i %local_path%\prepost_data\point_cloud\%%A.las -poly %local_path%\prepost_data\shp\%shp_name%.shp -o %local_path%\prepost_data\clipped\%%A_clip.las -v
 pause
-lasthin -i %local_path%\data\clipped\%%A_clip.las -step %THINSTEP% -o %local_path%\data\opt\%%A_thin.las
-
-lasoptimize -i %local_path%\data\opt\%%A_thin.las -o %local_path%\data\opt\%%A_opt.las -cpu64
-
-
-
+lasoptimize -i %local_path%\prepost_data\clipped\%%A_clip.las -o %local_path%\prepost_data\opt\%%A_opt.las -cpu64
 :: create temp1orary tile directory
 rmdir 1_tiles /s /q
 mkdir 1_tiles
 rem :: create a temp1orary tiling with tile size and buffer 30
-lastile -i %local_path%\data\opt\%%A_opt.las ^
+lastile -i %local_path%\prepost_data\opt\%%A_opt.las ^
          -set_classification 0 ^
          -tile_size %TILE_SIZE% -buffer %BUFFER% -flag_as_withheld ^
          -o 1_tiles\tile.las
@@ -59,10 +53,9 @@ lasground_new -i 3_tiles_sorted\tile*.las ^
               -cores %CORES%
 lasmerge -i 4_tiles_ground\tile*.las ^
          -drop_withheld ^
-		 -keep_class 2 ^
-         -o %local_path%\data\class_points\%%A_class.las -olas
-blast2dem -i %local_path%\data\class_points\%%A_class.las^
-          -step %STEP% -keep_class 2 -o %local_path%\data\dsm\%%A.tif
+         -o %local_path%\prepost_data\class_points\%%A_class.las -olas
+blast2dem -i %local_path%\prepost_data\class_points\%%A_class.las^
+          -step %STEP% -keep_class 2 -o %local_path%\prepost_data\dsm\%%A.tif
 rmdir 1_tiles /s /q
 rmdir 2_tiles_denoised /s /q
 rmdir 3_tiles_sorted /s /q
