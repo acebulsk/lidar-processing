@@ -1,0 +1,18 @@
+---
+# DATA INPUT PARAMETERS
+config_id: 'fsr_test_23_072' # (str) - unique identifier for this configuration, used for voxel space identification (use same in config 2)
+working_dir: '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/voxrs' # (str) - working directory for intermediate and output files (use same in config 2)
+
+las_in: '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/lastools/class_points/23_072_FT_class_denoise_0.5_0.5.las' # (str) - complete path to input .las file
+traj_in: '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/voxrs/metadata/23_072_all_lidar_trajectory.txt' # (str) - complete path to trajectory file (.csv) corresponding to las file.
+          # trajectory file must include the following header labels: Time[s], Easting[m], Northing[m], Height[m]
+return_set: "first"  # (str) - .las returns to be considered in sampling ('first' [recommended], 'last', or 'all')
+drop_class: 31 # (int) single class to be dropped from .las file prior to interpolation (blank or -1 for none)
+
+# VOXEL SPACE PARAMETERS
+cw_rotation_deg: 0  # (int) rotation of primary voxelspace axis in degrees (default 0)
+voxel_length: 10  # cubic voxel dimension in meters
+
+# PROCESSING PARAMETERS
+las_traj_chunksize: 10000000  # (int) point cloud chunk size for interpolation with trajectory (default 10000000, decrease for memory management)
+z_slices: 4  # (int) - number of horizontal layers for chunking of ray sampling (default 4, increase for memory management)

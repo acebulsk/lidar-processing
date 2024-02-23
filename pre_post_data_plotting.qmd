@@ -1,0 +1,128 @@
+---
+title: "Pre and Post Fresh Snowfall Depth Analysis"
+author: "Alex Cebulski & Maddie Harasyn"
+date: today
+format: 
+  html:
+    embed-resources: true
+---
+
+```{r, include=F}
+library(tidyverse)
+
+# avg error for each survey day 
+df_avg_surv_err <- read.csv('prepost_data/error_summary/pre_post_error_summary.csv') 
+
+drone_post_ids <- df_avg_surv_err$Identifier
+
+# the selection of lidar pre post dates was based on the days we have fsd's
+fsd_surveys <- read.csv('../snow-stats/data/processed/select_snow_surveys_w_stormids_datetime_wide.csv') |> 
+  mutate(
+    from = as.POSIXct(from, tz = 'Etc/GMT+6'),
+    to = as.POSIXct(to, tz = 'Etc/GMT+6'),
+    storm_id = as.Date(from, tz = 'Etc/GMT+6')) |> 
+  select(from, to, storm_id, use_in_calibration:qaqc_wind) |> 
+  # filter(use_in_storm_analysis == T) |> 
+  mutate(jday_from = paste0(format(from, "%y"), "_", format(from, "%j")),
+         jday_to = paste0(format(to, "%y"), "_", format(to, "%j"))) |> 
+  select(jday_from, jday_to, everything())
+
+surv_meta <- fsd_surveys |> 
+  select(from, to, jday_from, jday_to) |> 
+  mutate(survey_lag = difftime(to, from, units = 'hours')) |> 
+  filter(jday_to %in% drone_post_ids)
+
+df_avg_surv_err <-
+  left_join(df_avg_surv_err, surv_meta, by = c('Identifier' = 'jday_to'))
+```
+
+Objective: Assess the accuracy of lidar capability of measuring the depth of fresh snow. 
+
+The drone flights used for this analysis with corresponding snow surveys are:
+
+```{r}
+surv_meta
+```
+```{r}
+# bring in error summary for each snow survey point 
+
+fls <- list.files('prepost_data/error_summary', 
+                  pattern = 'survey_data*', full.names = T)
+
+# combine the error summary sheets fom the lidar_processing script
+df_surv_lidar_pts <- purrr::map_dfr(fls, read.csv) |> 
+  arrange(Identifier, transect, surv_id) |> 
+  left_join(surv_meta, by = c('Identifier' = 'jday_to')) 
+
+# compared manual snow survey measurements to lidar snow heights ----
+df_fsd_lidar_stats_pts <- df_surv_lidar_pts |> 
+  mutate(bias = Hs_lidar - Hs_insitu)
+```
+
+# Show the lidar fresh snow depth vs snow survey depths 
+
+Scatter plot: 
+
+```{r}
+df_fsd_lidar_stats_pts |> 
+  ggplot(aes(Hs_insitu*100, Hs_lidar*100, colour = canopy)) +
+  geom_point() +
+  geom_abline() +
+  facet_wrap(~jday_from + Identifier + to, scales = 'free') +
+  xlab('Snow Survey Fresh Snow Depth (cm)') +
+  ylab('Lidar Fresh Snow Depth (cm)')
+```
+
+
+Boxplot: 
+
+```{r}
+df_fsd_lidar_stats_pts |> 
+  ggplot(aes(bias*100, x = canopy)) +
+  geom_boxplot() +
+  facet_grid(~jday_from + Identifier + to) +
+  ylab('FSD Bias (cm, Lidar - Survey)')
+```
+
+
+```{r, include=F}
+# this recreates the avg survey df we pulled in from above and shows diff forumulas end up with the same values
+# df_fsd_lidar_stats_surv <- df_fsd_lidar_stats_pts |> 
+#   group_by(Identifier, from, to) |> 
+#   summarise(
+#     `Mean Bias` = mean(bias, na.rm = T),
+#     `Max Error` = bias[which.max(abs(bias))],
+#     MAE = mean(abs(bias), na.rm = T),
+#     RMSE = sqrt(mean(bias ^ 2, na.rm = T)),
+#     r2 = cor(Hs_insitu, Hs_lidar, use = 'na.or.complete', method = 'pearson')^2
+#   )
+```
+
+# Compare gnss elevation to the lidar dsm surface elevation 
+
+```{r}
+df_gnss_lidar_surface_ele <- df_surv_lidar_pts |> 
+  mutate(bias = lidar_dsm_z_snow - gnss_z_snow)
+```
+
+Scatterplot: 
+
+```{r}
+df_gnss_lidar_surface_ele |> 
+  ggplot(aes(gnss_z_snow, lidar_dsm_z_snow, colour = canopy)) +
+  geom_point() +
+  geom_abline() +
+  facet_wrap(~jday_from + Identifier + to, scales = 'free') +
+  xlab('GNSS Surface Elevation (m)') +
+  ylab('Lidar Surface Elevation (m)')
+```
+
+Boxplot: 
+
+```{r}
+df_gnss_lidar_surface_ele |> 
+  ggplot(aes(bias*100, x = canopy)) +
+  geom_boxplot() +
+  facet_grid(~jday_from + Identifier + to) +
+  ylab('Surface Elevation Bias (cm, Lidar - GNSS)')
+```
