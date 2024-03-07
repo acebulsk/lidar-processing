@@ -15,24 +15,23 @@ library(sf)
 
 # variables ###########################################################
 
-
 #pre snowfall file name
-pre_snow_las = "23_072_FT.las"
+pre_snow_las = "23_026_FT_new"
 
 #post snowfall file name
-post_snow_las = "23_073_FT.las"
+post_snow_las = "23_027_FT_new"
 
 #other variables ######################################################
 #name of shapefile to clip ROI
 # make sure this isnt too small as the las clip function has weird behaviour we
 # handle this by doing a secondary clip in R
-shp_name<-"FT_initialClip"
+# shp_name<-"FT_initialClip"
 
 #subset clip area
 subset_clip <- read_sf('prepost_data/shp/FT_finalClip.shp')
 
 #path to raw point clouds
-point_cloud_path = "/media/alex/phd-data/local-usask/field-downloads/lidar-data/pointclouds/"
+# point_cloud_path = "/media/alex/phd-data/local-usask/field-downloads/lidar-data/pointclouds/"
 
 #resolution of output DEMs
 RES_STEP = "0.1"
@@ -42,7 +41,6 @@ survey<-read.csv('prepost_data/survey_data/survey_points_FT.csv')
 
 #output Hs_insitu filename
 file_out = paste0(substr(pre_snow_las, 1,6), "_", substr(post_snow_las, 4,6), ".tif")
-
 
 # functions ##########################################################
 #error metric functions
@@ -78,23 +76,24 @@ files <- c(pre_snow_las, post_snow_las)
 files<-tools::file_path_sans_ext(files)
 
 # LAS TOOLS ##########################################################
-# AVOID RUNNING IF DATA ALREADY PROCESSED!!
+# For now just running  the LAStools_process_prepost.sh script externally
+# could update to edit params through R here.
 
 #LAStools processing produces a DEM
 #processes are organised in LAStools_process.bat file.
 #update lastools .bat script
-txt<-readLines('LAStools_process_prepost.bat')
-#update list to process
-txt[[13]]<-paste(c("set list=",files),collapse=" ")
-#update working directory
-txt[[14]]<-paste(c("set local_path=",gsub("/","\\\\",getwd())),collapse=" ")
-#update clipping area with name of correct .shp file
-txt[[15]]<-paste(c("set shp_name=", shp_name),collapse="")
-#update resolution of DEMs
-txt[[16]]<-paste(c("set STEP=", RES_STEP),collapse="")
-writeLines(txt, con = "LAStools_process.bat")
-#run LASTools code from R
-shell('LAStools_process.bat')
+# txt<-readLines('LAStools_process_prepost.bat')
+# #update list to process
+# txt[[13]]<-paste(c("set list=",files),collapse=" ")
+# #update working directory
+# txt[[14]]<-paste(c("set local_path=",gsub("/","\\\\",getwd())),collapse=" ")
+# #update clipping area with name of correct .shp file
+# txt[[15]]<-paste(c("set shp_name=", shp_name),collapse="")
+# #update resolution of DEMs
+# txt[[16]]<-paste(c("set STEP=", RES_STEP),collapse="")
+# writeLines(txt, con = "LAStools_process.bat")
+# #run LASTools code from R
+# shell('LAStools_process.bat')
 
 
 # main script ######################################################
