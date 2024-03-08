@@ -10,29 +10,31 @@
 cur_datetime=$(date +"%Y-%m-%d-%H-%M-%S")
 
 #### las params ####
+n_cores=6 # this works for functions that run on tiles but only if we run the functions from the absolute path for some reason
 z_min=2060 # drop pts below this ele
 z_max=2100 # drop pts above this ele
-rm_noise_step=1 # use a [n]x[n]x[n] uniform grid for finding isolated points  
-n_pts_isolated=100 # points are isolated when there is a total of less than [n] points in all neighhour cells  
-ground_step=3 # this is what maddie is using 2024-03
-ground_spike=0.1 # maddie is using 0.05 but this removes almost all the points
-ground_spike_down=0.1
+rm_noise_step=3 # use a [n]x[n]x[n] uniform grid for finding isolated points  
+n_pts_isolated=10 # points are isolated when there is a total of less than [n] points in all neighhour cells  
+ground_offset=0.1 # allows bulginess in ground classification
+ground_step=0.5 # this is what Cob settled with, rough sensitivity by ac to confirm could use more detailed sensitivity analysis on all the lasground params
+ground_spike=0.05 # maddie is using 0.05 but this removes almost all the points
 ground_class=2
+ground_thin_step=0.05
+grount_thin_perc=50 # gets the median for each grid
 las2dem_step=0.1
-tile_size=75
-buffer=20
+tile_size=50
+buffer=5
 
 #### proj settings ####
 las_path=/home/alex/bin/LAStools/bin
-n_cores=6 # this works if we run the functions from the absolute path for some reason
 prj_dir=/media/alex/phd-data/local-usask/analysis/lidar-processing
-#shp_clip=${prj_dir}/data/shp/FT_initialClip.shp
 shp_clip=${prj_dir}/data/shp/FT_initialClip.shp
-# file_list="23_026_FT_new 23_027_FT_new"
-file_list="23_026_FT_new"
+# shp_clip=${prj_dir}/data/shp/fsr_las_clip_very_small.shp
+file_list="23_026_FT_new 23_027_FT_new"
+# file_list="23_027_FT_new"
 pt_cld_path="/media/alex/phd-data/local-usask/field-downloads/lidar-data/pointclouds"
 
-prj_name=denoise_${ground_spike}_${ground_spike_down} # for file name suffix
+prj_name=v_small_test_${n_pts_isolated}_${ground_spike}_${ground_spike} # for file name suffix
 
 out_path=${prj_dir}/data/processed
 log_file=${prj_dir}/logs/lastools/${cur_datetime}_${prj_name}_lidar_pre_post_processing.log
@@ -51,113 +53,139 @@ for A in $file_list; do
     prj_base_name="${A:0:6}"
     out_path_updt=${out_path}/${prj_base_name}
 
-#     echo starting lasclip64 on file: $A.
-#     mkdir -p $out_path_updt/clipped # mkdir if doesnt exist
-#     lasclip64 -i "$pt_cld_path/$A.las" \
-#             -drop_z_above $z_max \
-#             -drop_z_below $z_min \
-#             -poly "$shp_clip" \
-#              -o "$out_path_updt/clipped/${A}_clip_${prj_name}.las" -v
+    echo starting lasclip64 on file: $A.
+    mkdir -p $out_path_updt/clipped # mkdir if doesnt exist
+    lasclip64 -i "$pt_cld_path/$A.las" \
+            -drop_z_above $z_max \
+            -drop_z_below $z_min \
+            -poly "$shp_clip" \
+             -o "$out_path_updt/clipped/${A}_clip_${prj_name}.las" -v
     
-#     echo finished lasclip64.
-#     echo 
+    echo finished lasclip64.
+    echo 
 
-#     echo starting lasoptimize64 on file: $A.
+    echo starting lasoptimize64 on file: $A.
 
-#     mkdir -p $out_path_updt/opt # mkdir if doesnt exist
-#     lasoptimize64 -i "$out_path_updt/clipped/${A}_clip_${prj_name}.las" \
-#              -o "$out_path_updt/opt/${A}_opt_${prj_name}.las" \
-#              # -cores $n_cores this is ingored since only one input file
+    mkdir -p $out_path_updt/opt # mkdir if doesnt exist
+    lasoptimize64 -i "$out_path_updt/clipped/${A}_clip_${prj_name}.las" \
+             -o "$out_path_updt/opt/${A}_opt_${prj_name}.las" \
+             # -cores $n_cores this is ingored since only one input file
 
-#     echo finished lasoptimize64.
-#     echo 
+    echo finished lasoptimize64.
+    echo 
 
-#     # create temporary tile directory
-#     rm -rf $out_path_updt/1_tiles
-#     mkdir $out_path_updt/1_tiles
+    # create temporary tile directory
+    rm -rf $out_path_updt/1_tiles
+    mkdir $out_path_updt/1_tiles
     
-#     echo starting lastile64 on file: $A.
+    echo starting lastile64 on file: $A.
     
-#     # create a temporary tiling with tile size and buffer 30
-#     lastile64 -i "$out_path_updt/opt/${A}_opt_${prj_name}.laz" \
-#              -set_classification 0 \
-#              -tile_size $tile_size -buffer $buffer -flag_as_withheld \
-#              -o $out_path_updt/1_tiles/tile.las \
-#              # -cores $n_cores not advised by lastools...
+    # create a temporary tiling with tile size and buffer 30
+    lastile64 -i "$out_path_updt/opt/${A}_opt_${prj_name}.laz" \
+             -set_classification 0 \
+             -tile_size $tile_size -buffer $buffer -flag_as_withheld \
+             -o $out_path_updt/1_tiles/tile.las \
+             # -cores $n_cores not advised by lastools...
 
-#     echo finished lastile64.
-#     echo 
+    echo finished lastile64.
+    echo 
 
-#     rm -rf $out_path_updt/2_tiles_denoised
-#     mkdir $out_path_updt/2_tiles_denoised
+    rm -rf $out_path_updt/2_tiles_denoised
+    mkdir $out_path_updt/2_tiles_denoised
 
-#     echo starting lasnoise64 on file: $A.
+    echo starting lasnoise64 on file: $A.
     
-#     $las_path/lasnoise64 -i $out_path_updt/1_tiles/tile*.las \
-#              -step $rm_noise_step -isolated $n_pts_isolated \
-#              -classify_as 31 \
-#              -odir $out_path_updt/2_tiles_denoised \
-#              -remove_noise \
-#              -cores $n_cores
+    $las_path/lasnoise64 -i $out_path_updt/1_tiles/tile*.las \
+             -step $rm_noise_step -isolated $n_pts_isolated \
+             -classify_as 31 \
+             -odir $out_path_updt/2_tiles_denoised \
+             -remove_noise \
+             -cores $n_cores
 
-#     echo finished lasnoise64.
-#     echo 
+    echo finished lasnoise64.
+    echo 
 
-#     rm -rf $out_path_updt/3_tiles_sorted
-#     mkdir $out_path_updt/3_tiles_sorted
+    rm -rf $out_path_updt/3_tiles_sorted
+    mkdir $out_path_updt/3_tiles_sorted
     
-#     echo starting lassort64 on file: $A.
+    echo starting lassort64 on file: $A.
 
-#     $las_path/lassort64 -i $out_path_updt/2_tiles_denoised/*.las \
-#             -odir $out_path_updt/3_tiles_sorted -olas \
-#             -cores $n_cores
+    $las_path/lassort64 -i $out_path_updt/2_tiles_denoised/*.las \
+            -odir $out_path_updt/3_tiles_sorted -olas \
+            -cores $n_cores
 
-#     echo finished lassort64.
-#     echo 
+    echo finished lassort64.
+    echo 
 
-#     rm -rf $out_path_updt/4_tiles_ground
-#     mkdir $out_path_updt/4_tiles_ground
+    rm -rf $out_path_updt/4_tiles_ground
+    mkdir $out_path_updt/4_tiles_ground
     
-#     echo starting lasground_new64 on file: $A.
+    echo starting lasground_new64 on file: $A.
 
-#     $las_path/lasground_new64 -i $out_path_updt/3_tiles_sorted/tile*.las \
-#                   -step $ground_step \
-#                   -extra_fine \
-#                   -spike $ground_spike \
-#                   -spike_down $ground_spike_down \
-#                   -ground_class $ground_class \
-#                   -odir $out_path_updt/4_tiles_ground \
-#                   -cores $n_cores
+    $las_path/lasground_new64 -i $out_path_updt/3_tiles_sorted/tile*.las \
+                  -step $ground_step \
+                  -offset $ground_offset \
+                  -ultra_fine \
+                  -spike $ground_spike \
+                  -spike_down $ground_spike \
+                  -ground_class $ground_class \
+                  -odir $out_path_updt/4_tiles_ground \
+                  -cores $n_cores
 
-#     echo finished lasground_new64.
-#     echo 
+    echo finished lasground_new64.
+    echo 
 
-#     mkdir -p $out_path_updt/class_points # mkdir if doesnt exist
+    mkdir -p $out_path_updt/class_points # mkdir if doesnt exist
 
-#     echo starting lasmerge64 on file: $A.
+    rm -rf $out_path_updt/5_tiles_ground_thin
+    mkdir $out_path_updt/5_tiles_ground_thin
+    
+    echo starting lasthin64 on file: $A.
 
-#     $las_path/lasmerge64 -i $out_path_updt/4_tiles_ground/tile*.las \
-#              -drop_withheld \
-#              -o "$out_path_updt/class_points/${A}_class_${prj_name}.las" -olas
+    $las_path/lasthin64 -i $out_path_updt/4_tiles_ground/tile*.las \
+                  -keep_class $ground_class \
+                  -step $ground_thin_step \
+                  -percentile $grount_thin_perc \
+                  -odir $out_path_updt/5_tiles_ground_thin \
+                  -cores $n_cores
 
-#     echo finished lasmerge64.
-#     echo 
+    echo finished lasthin64.
+    echo 
+
+    mkdir -p $out_path_updt/class_points # mkdir if doesnt exist
+
+    # echo starting lasmerge64 on file: $A.
+
+    # # use the merged output for checking noise / ground class but run las2dem using tiles for performance
+    # $las_path/lasmerge64 -i $out_path_updt/4_tiles_ground/tile*.las \
+    #          -drop_withheld \
+    #          -o "$out_path_updt/class_points/${A}_class_${prj_name}.las" -olas
+
+    # # use the merged output for checking noise / ground class but run las2dem using tiles for performance
+    # $las_path/lasmerge64 -i $out_path_updt/5_tiles_ground_thin/tile*.las \
+    #          -drop_withheld \
+    #          -o "$out_path_updt/class_points/${A}_class_thin_${prj_name}.las" -olas
+
+    # echo finished lasmerge64.
+    # echo
 
     mkdir -p $out_path_updt/dsm # mkdir if doesnt exist
 
     echo starting las2dem64 on file: $A.
 
-    $las_path/las2dem64 -i "$out_path_updt/class_points/${A}_class_${prj_name}.las" \
+    $las_path/las2dem64 -i $out_path_updt/5_tiles_ground_thin/tile*.las \
               -step $las2dem_step \
               -keep_class 2 \
-              -o "$out_path_updt/dsm/${A}_${prj_name}.tif" \
-              -vv
-              # -cores $n_cores this is ignored since one file
+              -odir $out_path_updt/dsm/ \
+              -obil \
+              -use_tile_bb \
+              -vv \
+              -cores $n_cores
 
     echo finished las2dem64.
     echo 
 
-    rm -rf $out_path_updt/1_tiles $out_path_updt/2_tiles_denoised $out_path_updt/3_tiles_sorted $out_path_updt/4_tiles_ground
+    #rm -rf $out_path_updt/1_tiles $out_path_updt/2_tiles_denoised $out_path_updt/3_tiles_sorted $out_path_updt/4_tiles_ground
 done 2>&1 | tee -a $log_file
 
 echo | tee -a $log_file
