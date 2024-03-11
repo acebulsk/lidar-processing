@@ -21,7 +21,10 @@ ground_spike=0.05 # maddie is using 0.05 but this removes almost all the points
 ground_class=2
 ground_thin_step=0.05
 grount_thin_perc=50 # gets the median for each grid
+#las2dem_ll=0.1 # not used
 las2dem_step=0.1
+las2dem_float_prec=0.00025 # as in staines 2023
+las2dem_max_tin_edge=0.5 # should experiement with this if wanting to remove large areas that should not be interpolated.
 tile_size=50
 buffer=5
 
@@ -30,11 +33,19 @@ las_path=/home/alex/bin/LAStools/bin
 prj_dir=/media/alex/phd-data/local-usask/analysis/lidar-processing
 shp_clip=${prj_dir}/data/shp/FT_initialClip.shp
 # shp_clip=${prj_dir}/data/shp/fsr_las_clip_very_small.shp
-file_list="23_026_FT_new 23_027_FT_new"
-# file_list="23_027_FT_new"
+file_list="23_026_FT_new 23_027_FT_new" 
+pre_sf_index=1
+post_sf_index=2
+# Convert the file list string into an array
+read -r -a file_array <<< "$file_list"
+# Extract elements based on indices
+pre_sf="${file_array[$pre_sf_index - 1]}"
+post_sf="${file_array[$post_sf_index - 1]}"
+
 pt_cld_path="/media/alex/phd-data/local-usask/field-downloads/lidar-data/pointclouds"
 
-prj_name=v_small_test_${n_pts_isolated}_${ground_spike}_${ground_spike} # for file name suffix
+# prj_name=v_small_test_${n_pts_isolated}_${ground_spike}_${ground_spike} # for file name suffix
+prj_name='base_pars' # for prj dirs and file name suffix
 
 out_path=${prj_dir}/data/processed
 log_file=${prj_dir}/logs/lastools/${cur_datetime}_${prj_name}_lidar_pre_post_processing.log
@@ -90,27 +101,28 @@ for A in $file_list; do
     echo finished lastile64.
     echo 
 
-    rm -rf $out_path_updt/2_tiles_denoised
-    mkdir $out_path_updt/2_tiles_denoised
+# commented out as currently not removing any points
+#     rm -rf $out_path_updt/2_tiles_denoised
+#     mkdir $out_path_updt/2_tiles_denoised
 
-    echo starting lasnoise64 on file: $A.
+#     echo starting lasnoise64 on file: $A.
     
-    $las_path/lasnoise64 -i $out_path_updt/1_tiles/tile*.las \
-             -step $rm_noise_step -isolated $n_pts_isolated \
-             -classify_as 31 \
-             -odir $out_path_updt/2_tiles_denoised \
-             -remove_noise \
-             -cores $n_cores
+#     $las_path/lasnoise64 -i $out_path_updt/1_tiles/tile*.las \
+#              -step $rm_noise_step -isolated $n_pts_isolated \
+#              -classify_as 31 \
+#              -odir $out_path_updt/2_tiles_denoised \
+#              -remove_noise \
+#              -cores $n_cores
 
-    echo finished lasnoise64.
-    echo 
+#     echo finished lasnoise64.
+#     echo 
 
     rm -rf $out_path_updt/3_tiles_sorted
     mkdir $out_path_updt/3_tiles_sorted
     
     echo starting lassort64 on file: $A.
 
-    $las_path/lassort64 -i $out_path_updt/2_tiles_denoised/*.las \
+    $las_path/lassort64 -i $out_path_updt/1_tiles/*.las \
             -odir $out_path_updt/3_tiles_sorted -olas \
             -cores $n_cores
 
@@ -135,8 +147,6 @@ for A in $file_list; do
     echo finished lasground_new64.
     echo 
 
-    mkdir -p $out_path_updt/class_points # mkdir if doesnt exist
-
     rm -rf $out_path_updt/5_tiles_ground_thin
     mkdir $out_path_updt/5_tiles_ground_thin
     
@@ -152,31 +162,72 @@ for A in $file_list; do
     echo finished lasthin64.
     echo 
 
-    mkdir -p $out_path_updt/class_points # mkdir if doesnt exist
+    # need merged output for the presnowfall surface the lasheight function
+    # Check if $A equals pre_sf
+    if [ "$A" = "$pre_sf" ]; then
+        # Create directory if it doesn't exist
+        mkdir -p $out_path_updt/06_pre_sf_thin_merge # mkdir if doesnt exist
 
-    # echo starting lasmerge64 on file: $A.
+        echo starting lasmerge64 on file: $A.
 
-    # # use the merged output for checking noise / ground class but run las2dem using tiles for performance
-    # $las_path/lasmerge64 -i $out_path_updt/4_tiles_ground/tile*.las \
-    #          -drop_withheld \
-    #          -o "$out_path_updt/class_points/${A}_class_${prj_name}.las" -olas
+        $las_path/lasmerge64 -i $out_path_updt/5_tiles_ground_thin/tile*.las \
+                -keep_class $ground_class \
+                -drop_withheld \
+                -o "$out_path_updt/06_pre_sf_thin_merge/${A}_06_${prj_name}.las" -olas
 
-    # # use the merged output for checking noise / ground class but run las2dem using tiles for performance
-    # $las_path/lasmerge64 -i $out_path_updt/5_tiles_ground_thin/tile*.las \
-    #          -drop_withheld \
-    #          -o "$out_path_updt/class_points/${A}_class_thin_${prj_name}.las" -olas
+        echo finished lasmerge64.
+        echo
+    fi
 
-    # echo finished lasmerge64.
-    # echo
+    # for the post flight we will normalise it to the pre flight using las height
+    if [ "$A" = "$post_sf" ]; then
+        mkdir -p $out_path_updt/07_post_sf_thin_normalised # mkdir if doesnt exist
+        echo starting lasheight64 using:
+        echo Pre SF: $pre_sf.
+        echo Post SF: $post_sf.
 
-    mkdir -p $out_path_updt/dsm # mkdir if doesnt exist
+        $las_path/lasheight64 -i $out_path_updt/5_tiles_ground_thin/tile*.las \
+                        -keep_class $ground_class \
+                        -replace_z \
+                        -ground_points $out_path/${pre_sf:0:6}/06_pre_sf_thin_merge/${pre_sf}_06_${prj_name}.las \
+                        -odir $out_path_updt/07_post_sf_thin_normalised \
+                        -cores $n_cores
+
+        echo finished lasthin64.
+        echo 
+
+        # use above to create dsm from normalised las which is essentially has elevation equal to height of snow for each point. This is instead of creating a dsm for each flight and subtracting later... not sure what is better.
+        mkdir -p $out_path_updt/dsm_hs_normalised/$prj_name # mkdir if doesnt exist
+
+        echo starting las2dem64 on file: $A which has been normalised to height of snow elevations.
+
+        $las_path/las2dem64 -i $out_path_updt/07_post_sf_thin_normalised/*.las \
+                -step $las2dem_step \
+                -keep_class 2 \
+                -odir $out_path_updt/dsm_hs_normalised/$prj_name \
+                -odix _$prj_name \
+                -float_precision $las2dem_float_prec \
+                -obil \
+                -use_tile_bb \
+                -vv \
+                -cores $n_cores
+
+        echo finished las2dem64.
+        echo 
+
+    fi
+
+    mkdir -p $out_path_updt/dsm/$prj_name # mkdir if doesnt exist
 
     echo starting las2dem64 on file: $A.
 
     $las_path/las2dem64 -i $out_path_updt/5_tiles_ground_thin/tile*.las \
               -step $las2dem_step \
+              -kill $las2dem_max_tin_edge \
               -keep_class 2 \
-              -odir $out_path_updt/dsm/ \
+              -odir $out_path_updt/dsm/$prj_name \
+              -odix _$prj_name \
+              -float_precision $las2dem_float_prec \
               -obil \
               -use_tile_bb \
               -vv \
@@ -185,7 +236,7 @@ for A in $file_list; do
     echo finished las2dem64.
     echo 
 
-    #rm -rf $out_path_updt/1_tiles $out_path_updt/2_tiles_denoised $out_path_updt/3_tiles_sorted $out_path_updt/4_tiles_ground
+    #rm -rf $out_path_updt/1_tiles $out_path_updt/2_tiles_denoised $out_path_updt/3_tiles_sorted $out_path_updt/4_tiles_ground $out_path_updt/5_tiles_ground_thin
 done 2>&1 | tee -a $log_file
 
 echo | tee -a $log_file

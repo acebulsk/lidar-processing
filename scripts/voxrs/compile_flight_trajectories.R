@@ -17,12 +17,12 @@ traj_paths <-
 traj_df <- purrr::map_dfr(paste0(traj_path, surv_id, '/',traj_paths), read.csv) 
 
 traj_out <- traj_df |> 
-  select(`Time[s]` = Time.s.,
+  dplyr::select(`Time[s]` = Time.s.,
          `Easting[m]` = Easting.m., 
          `Northing[m]` = Northing.m.,
          `Height[m]` = Height.m.)
 
 write.csv(traj_out,
           paste0('/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/',
-                 surv_id, '/metadata/', surv_id, '_all_lidar_trajectory.txt'),
+                 surv_id, '/voxrs/metadata/', surv_id, '_all_lidar_trajectory.txt'),
           row.names = F)
