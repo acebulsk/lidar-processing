@@ -46,7 +46,7 @@ surv_meta
 ```{r}
 # bring in error summary for each snow survey point 
 
-fls <- list.files('prepost_data/error_summary', 
+fls <- list.files('prepost_data/lidar_w_survey_hs/', 
                   pattern = 'survey_data*', full.names = T)
 
 # combine the error summary sheets fom the lidar_processing script
@@ -68,7 +68,7 @@ df_fsd_lidar_stats_pts |>
   ggplot(aes(Hs_insitu*100, Hs_lidar*100, colour = canopy)) +
   geom_point() +
   geom_abline() +
-  facet_wrap(~jday_from + Identifier + to, scales = 'free') +
+  facet_wrap(~jday_from + Identifier + prj_name +  to, scales = 'free') +
   xlab('Snow Survey Fresh Snow Depth (cm)') +
   ylab('Lidar Fresh Snow Depth (cm)')
 ```
@@ -80,10 +80,19 @@ Boxplot:
 df_fsd_lidar_stats_pts |> 
   ggplot(aes(bias*100, x = canopy)) +
   geom_boxplot() +
-  facet_grid(~jday_from + Identifier + to) +
+  facet_grid(~jday_from + Identifier + prj_name + to) +
   ylab('FSD Bias (cm, Lidar - Survey)')
 ```
+Just Jan 2023:
 
+```{r}
+df_fsd_lidar_stats_pts |> 
+  filter(Identifier == '23_027') |> 
+  ggplot(aes(bias*100, x = canopy)) +
+  geom_boxplot() +
+  facet_grid(~jday_from + Identifier + prj_name + to) +
+  ylab('FSD Bias (cm, Lidar - Survey)')
+```
 
 ```{r, include=F}
 # this recreates the avg survey df we pulled in from above and shows diff forumulas end up with the same values
