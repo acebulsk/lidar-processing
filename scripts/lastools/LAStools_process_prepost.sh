@@ -9,25 +9,6 @@
 
 cur_datetime=$(date +"%Y-%m-%d-%H-%M-%S")
 
-#### las params ####
-n_cores=6 # this works for functions that run on tiles but only if we run the functions from the absolute path for some reason
-z_min=2060 # drop pts below this ele
-z_max=2100 # drop pts above this ele
-rm_noise_step=3 # use a [n]x[n]x[n] uniform grid for finding isolated points  
-n_pts_isolated=10 # points are isolated when there is a total of less than [n] points in all neighhour cells  
-ground_offset=0.1 # allows bulginess in ground classification
-ground_step=0.5 # this is what Cob settled with, rough sensitivity by ac to confirm could use more detailed sensitivity analysis on all the lasground params
-ground_spike=0.05 # maddie is using 0.05 but this removes almost all the points
-ground_class=2
-ground_thin_step=0.05
-grount_thin_perc=50 # gets the median for each grid
-#las2dem_ll=0.1 # not used
-las2dem_step=0.1
-las2dem_float_prec=0.00025 # as in staines 2023
-las2dem_max_tin_edge=0.5 # should experiement with this if wanting to remove large areas that should not be interpolated.
-tile_size=50
-buffer=5
-
 #### proj settings ####
 las_path=/home/alex/bin/LAStools/bin
 prj_dir=/media/alex/phd-data/local-usask/analysis/lidar-processing
@@ -49,6 +30,26 @@ prj_name='base_pars' # for prj dirs and file name suffix
 
 out_path=${prj_dir}/data/processed
 log_file=${prj_dir}/logs/lastools/${cur_datetime}_${prj_name}_lidar_pre_post_processing.log
+
+
+#### las params ####
+n_cores=6 # this works for functions that run on tiles but only if we run the functions from the absolute path for some reason
+z_min=2060 # drop pts below this ele
+z_max=2100 # drop pts above this ele
+rm_noise_step=3 # use a [n]x[n]x[n] uniform grid for finding isolated points  
+n_pts_isolated=10 # points are isolated when there is a total of less than [n] points in all neighhour cells  
+ground_offset=0.1 # allows bulginess in ground classification
+ground_step=0.5 # this is what Cob settled with, rough sensitivity by ac to confirm could use more detailed sensitivity analysis on all the lasground params
+ground_spike=0.05 # maddie is using 0.05 but this removes almost all the points
+ground_class=2
+ground_thin_step=0.05
+grount_thin_perc=50 # gets the median for each grid
+#las2dem_ll=0.1 # not used
+las2dem_step=0.1
+las2dem_float_prec=0.00025 # as in staines 2023
+las2dem_max_tin_edge=0.5 # should experiement with this if wanting to remove large areas that should not be interpolated.
+tile_size=50
+buffer=5
 
 echo "######################################################################" | tee -a $log_file
 echo LAStools_process_prepost.sh script started at $cur_datetime under the project name $prj_name | tee -a $log_file
@@ -203,6 +204,7 @@ for A in $file_list; do
 
         $las_path/las2dem64 -i $out_path_updt/07_post_sf_thin_normalised/*.las \
                 -step $las2dem_step \
+                -kill $las2dem_max_tin_edge \
                 -keep_class 2 \
                 -odir $out_path_updt/dsm_hs_normalised/$prj_name \
                 -odix _$prj_name \
@@ -235,8 +237,6 @@ for A in $file_list; do
 
     echo finished las2dem64.
     echo 
-
-    #rm -rf $out_path_updt/1_tiles $out_path_updt/2_tiles_denoised $out_path_updt/3_tiles_sorted $out_path_updt/4_tiles_ground $out_path_updt/5_tiles_ground_thin
 done 2>&1 | tee -a $log_file
 
 echo | tee -a $log_file
