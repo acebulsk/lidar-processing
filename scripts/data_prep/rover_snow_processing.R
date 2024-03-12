@@ -2,6 +2,7 @@
 rm(list = ls())
 
 library(dplyr)
+library(sf)
 
 # variables #######################################################
 
@@ -13,8 +14,8 @@ library(dplyr)
 
  # paths for prepost survey data
 lidar_data_path <- '/media/alex/phd-data/local-usask/field-downloads/lidar-data/'
-snow_survey_path <- '~/local-usask/analysis/snow-stats/data/processed/fresh_snow_densities_with_ground_partials.csv'
-survey_data_out_path <- 'prepost_data/survey_data/survey_points_FT.csv'
+snow_survey_path <- '~/local-usask/analysis/snow-stats/data/processed/fresh_snow_densities_db.rds'
+survey_data_out_path <- 'data/survey_data/survey_points_FT.csv'
 
 #factor to convert in situ snow depth to meters (lidar snow depth unit)
 Hs_conv_fact = 0.001
@@ -65,13 +66,13 @@ rover_pts_df <- do.call(rbind, rover_pts_list) |>
          !GNSS_point_id %in% bad_gnss_ids) |> 
   dplyr::mutate(GNSS_point_id = gsub('GS', x = GNSS_point_id, ''),
          GNSS_point_id = floor(as.numeric(GNSS_point_id)),
-         datetime = as.POSIXct(datetime, format = '%m/%d/%Y %H:%M:%OS'),
+         datetime = as.POSIXct(datetime, format = '%m/%d/%Y %H:%M:%OS', tz = 'UTC'),
          yy_ddd = paste0(format(datetime, "%y"), "_", format(datetime, "%j"))) |> 
   # need to remove bad pt ids 
   dplyr::filter(GNSS_point_id < high_lim_gnss_id)
 
-snow_data <- read.csv(snow_survey_path) |>
-  mutate(datetime = as.POSIXct(datetime)) |> 
+snow_data <- readRDS(snow_survey_path) |>
+  # mutate(datetime = as.POSIXct(datetime, tz = 'Etc/GMT+6')) |> 
   dplyr::select(datetime,
          GNSS_point_id = gps_id,
          transect,
@@ -89,6 +90,58 @@ survey_data <- dplyr::left_join(rover_pts_df,
                          snow_data, 
                          by = c("yy_ddd", "GNSS_point_id"),
                          multiple = "all")
+
+# gnss qaqc ----
+
+# GPS coord for T2 20 M seems off for 23_073 so moving it to same as 23_027
+lat_fix <- survey_data$lat_dms[survey_data$yy_ddd == '23_027' & 
+                                 survey_data$transect == 'T2' &
+                                 survey_data$num == 20 &
+                                 survey_data$canopy == 'M' &
+                                 survey_data$GNSS_point_id == 33]
+
+survey_data$lat_dms[survey_data$yy_ddd == '23_073' & 
+                      survey_data$transect == 'T2' &
+                      survey_data$num == 20 &
+                      survey_data$canopy == 'M' &
+                      survey_data$GNSS_point_id == 32] <- lat_fix
+
+lon_fix <- survey_data$lon_dms[survey_data$yy_ddd == '23_027' & 
+                                 survey_data$transect == 'T2' &
+                                 survey_data$num == 20 &
+                                 survey_data$canopy == 'M' &
+                                 survey_data$GNSS_point_id == 33]
+
+survey_data$lon_dms[survey_data$yy_ddd == '23_073' & 
+                      survey_data$transect == 'T2' &
+                      survey_data$num == 20 &
+                      survey_data$canopy == 'M' &
+                      survey_data$GNSS_point_id == 32] <- lon_fix
+
+# GPS coord for T2 24 O is right in the pathway for 22_027 so moving it to same as 23_073
+lat_fix <- survey_data$lat_dms[survey_data$yy_ddd == '23_073' & 
+                                 survey_data$transect == 'T2' &
+                                 survey_data$num == 24 &
+                                 survey_data$canopy == 'O' &
+                                 survey_data$GNSS_point_id == 33]
+
+survey_data$lat_dms[survey_data$yy_ddd == '23_027' & 
+                      survey_data$transect == 'T2' &
+                      survey_data$num == 24 &
+                      survey_data$canopy == 'O' &
+                      survey_data$GNSS_point_id == 34] <- lat_fix
+
+lon_fix <- survey_data$lon_dms[survey_data$yy_ddd == '23_073' & 
+                                 survey_data$transect == 'T2' &
+                                 survey_data$num == 24 &
+                                 survey_data$canopy == 'O' &
+                                 survey_data$GNSS_point_id == 33]
+
+survey_data$lon_dms[survey_data$yy_ddd == '23_027' & 
+                      survey_data$transect == 'T2' &
+                      survey_data$num == 24 &
+                      survey_data$canopy == 'O' &
+                      survey_data$GNSS_point_id == 34] <- lon_fix
 
 survey_data$lat_dd = angle2dec(survey_data$lat_dms)
 survey_data$lon_dd = angle2dec(survey_data$lon_dms)*-1
@@ -135,9 +188,9 @@ for (id in survey_data_out_sf_utm$Identifier |> unique()) {
     dplyr::select(id, easting_m, northing_m, elev_m = z)
   
   write.csv(fltr_pts,
-            paste0('../lidar-processing/prepost_data/survey_data/', id, '_fsd_gnss_survey_points.csv'),
+            paste0('../lidar-processing/data/survey_data/', id, '_fsd_gnss_survey_points.csv'),
             row.names = F) 
 }
 
-st_write(survey_data_out_sf_utm, 'prepost_data/survey_data/survey_points_FT.gpkg', append = F)
+st_write(survey_data_out_sf_utm, 'data/survey_data/survey_points_FT.gpkg', append = F)
 

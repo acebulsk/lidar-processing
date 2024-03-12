@@ -3,7 +3,7 @@
 #January  27, 2023
 #Edited by Maddie Harasyn to only compare pre- and post- snowfall DSM layers
 #More edits by alex do mod for linux processing and add some of cobs functions
-# TODO apply Cobs lasheight to see if improves lidar error
+# 
 rm(list = ls())
 
 #load libraries
@@ -19,13 +19,14 @@ las_proc_out_path <- '/media/alex/phd-data/local-usask/analysis/lidar-processing
 
 # variables ###########################################################
 
-prj_name <- 'base_pars'
+# ofst0.1_gstep2_gspike0.1 seems to have the best aggreement with our field obs
+prj_name <- 'gofst0.1_gstep2_gspike0.1'
 
 #pre snowfall file name
-pre_snow_id = "23_026"
+pre_snow_id = "23_072"
 
 #post snowfall file name
-post_snow_id = "23_027"
+post_snow_id = "23_073"
 
 #other variables ######################################################
 
@@ -111,9 +112,11 @@ post_index = 2
 
 #initialise snow depth raster stack
 SD<-pre_post_dsm_stack[[post_index]]-pre_post_dsm_stack[[pre_index]]
+SD <- SD |> 
+  tidyterra::filter(tile_626850_5632000_gofst0.1_gstep2_gspike0.1> 0)
 
 #output Hs_insitu rasters into data/Hs folder
-raster::writeRaster(SD, paste0('data/dsm_snow_depth/', prj_name, '_', file_out), overwrite = T)
+terra::writeRaster(SD, paste0('data/dsm_snow_depth/', prj_name, '_', file_out), overwrite = T)
 
 # Snow Depth Calculation Using normalised snow depth ----
 
@@ -131,9 +134,10 @@ norm_rast_sd_tiles <-
   ) |> 
   map(terra::rast) 
 
-norm_rast_merged <- do.call(terra::merge, norm_rast_sd_tiles)
+norm_rast_merged <- do.call(terra::merge, norm_rast_sd_tiles) |> 
+  tidyterra::filter(tile_626850_5632000_gofst0.1_gstep2_gspike0.1 > 0)
 
-raster::writeRaster(
+terra::writeRaster(
   norm_rast_merged,
   paste0('data/dsm_snow_depth/', prj_name, '_normalised_', file_out),
   overwrite = T
@@ -146,45 +150,16 @@ raster::writeRaster(
 
 survey$gnss_z_snow<-survey$z
 
-survey$lidar_dsm_z_snow<- terra::extract(post_rast_merged, survey_gnss_pts_vect)[,2]
+survey$lidar_dsm_z_snow<- terra::extract(post_rast_merged, survey_gnss_pts_vect, method = 'bilinear')[,2]
 
 ## Extract snow depth from dsm from survey coords ----
 
-survey$Hs_lidar <- terra::extract(SD, survey_gnss_pts_vect)[,2]
-survey$Hs_lidar_norm <- terra::extract(norm_rast_merged, survey_gnss_pts_vect)[,2]
+survey$Hs_lidar <- terra::extract(SD, survey_gnss_pts_vect, method = 'bilinear')[,2]
+survey$Hs_lidar_norm <- terra::extract(norm_rast_merged, survey_gnss_pts_vect, method = 'bilinear')[,2]
 survey$bias <- survey$Hs_lidar - survey$Hs_insitu
 survey$bias_norm <- survey$Hs_lidar_norm - survey$Hs_insitu
 
-ggplot2::ggplot(survey, ggplot2::aes(Hs_lidar_norm, Hs_lidar)) + 
-  ggplot2::geom_point(aes(colour = canopy)) +
-  ggplot2::geom_abline()  +
-  ggpubr::stat_cor(aes(
-                     label = paste(
-                       ..rr.label..,
-                       if_else(
-                         readr::parse_number(..p.label..) < 0.001,
-                         "p<0.001",
-                         ..p.label..
-                       ),
-                       sep = "~`, `~"
-                     )),
-                   geom = "label",
-                   show.legend = F) 
-#plotly::ggplotly()
-
-ggplot2::ggsave(
-  paste0(
-    'figs/lidar_snow_depth_analysis/pre_post_figs/',
-    post_snow_id,
-    '_',
-    prj_name,
-    '_snow_depth_lidar_norm_vs_lidar.png'
-  ),
-  width = 6,
-  height = 4, device = png
-)
-
-ggplot2::ggplot(survey, ggplot2::aes(Hs_insitu, Hs_lidar_norm)) + 
+ggplot2::ggplot(survey |> filter(Hs_lidar_norm > 0), ggplot2::aes(Hs_insitu, Hs_lidar_norm)) + 
   ggplot2::geom_point(aes(colour = canopy)) +
   ggplot2::geom_abline()  +
   ggpubr::stat_cor(aes(
@@ -199,8 +174,8 @@ ggplot2::ggplot(survey, ggplot2::aes(Hs_insitu, Hs_lidar_norm)) +
     )),
     geom = "label",
     show.legend = F) +
-  ylim(c(0,0.15)) +
-  xlim(c(0, 0.15))
+  ylab('Normalised Lidar Snow Depth (m)') +
+  xlab('In-situ Snow Depth (m)')
 #plotly::ggplotly()
 
 ggplot2::ggsave(
@@ -209,17 +184,16 @@ ggplot2::ggsave(
     post_snow_id,
     '_',
     prj_name,
-    '_snow_depth_lidar_norm_vs_lidar.png'
+    '_snow_depth_Hs_insitu_vs_Hs_lidar_norm.png'
   ),
   width = 6,
   height = 4, device = png
 )
 
-ggplot2::ggplot(survey, ggplot2::aes(Hs_insitu, Hs_lidar)) + 
+ggplot2::ggplot(survey |> filter(Hs_lidar > 0), ggplot2::aes(Hs_insitu, Hs_lidar)) + 
   ggplot2::geom_point(aes(colour = canopy)) +
   ggplot2::geom_abline()  +
-  ggpubr::stat_cor(label.x = 0.07,
-                     label.y.npc = "bottom",aes(
+  ggpubr::stat_cor(aes(
     label = paste(
       ..rr.label..,
       if_else(
@@ -230,9 +204,9 @@ ggplot2::ggplot(survey, ggplot2::aes(Hs_insitu, Hs_lidar)) +
       sep = "~`, `~"
     )),
   geom = "label",
-  show.legend = F)  +
-  ylim(c(0,0.15)) +
-  xlim(c(0, 0.15))
+  show.legend = F) +
+  ylab('Lidar Snow Depth (m)') +
+  xlab('In-situ Snow Depth (m)')
   #plotly::ggplotly()
 
 ggplot2::ggsave(
