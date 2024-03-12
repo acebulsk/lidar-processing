@@ -9,12 +9,32 @@
 
 cur_datetime=$(date +"%Y-%m-%d-%H-%M-%S")
 
+#### las params ####
+n_cores=6 # this works for functions that run on tiles but only if we run the functions from the absolute path for some reason
+z_min=2060 # drop pts below this ele
+z_max=2100 # drop pts above this ele
+# rm_noise_step=3 # use a [n]x[n]x[n] uniform grid for finding isolated points  
+# n_pts_isolated=10 # points are isolated when there is a total of less than [n] points in all neighhour cells  
+ground_offset=0.1 # allows bulginess in ground classification
+ground_step=2 # sensitivity analysis by AC 2024-03-12
+ground_spike=0.1 # sensitivity analysis by AC 2024-03-12
+ground_class=2
+ground_thin_step=0.1
+ground_thin_perc=50 # gets the median for each grid
+#las2dem_ll=0.1 # not used
+las2dem_step=0.1
+las2dem_float_prec=0.00025 # as in staines 2023
+las2dem_max_tin_edge=0.5 # should experiement with this if wanting to remove large areas that should not be interpolated.
+tile_size=50
+buffer=5
+
 #### proj settings ####
 las_path=/home/alex/bin/LAStools/bin
 prj_dir=/media/alex/phd-data/local-usask/analysis/lidar-processing
 shp_clip=${prj_dir}/data/shp/FT_initialClip.shp
 # shp_clip=${prj_dir}/data/shp/fsr_las_clip_very_small.shp
-file_list="23_026_FT_new 23_027_FT_new" 
+file_list="23_072_FT_new 23_073_FT_new"
+# file_list="23_026_FT_new 23_027_FT_new"
 pre_sf_index=1
 post_sf_index=2
 # Convert the file list string into an array
@@ -25,31 +45,12 @@ post_sf="${file_array[$post_sf_index - 1]}"
 
 pt_cld_path="/media/alex/phd-data/local-usask/field-downloads/lidar-data/pointclouds"
 
-# prj_name=v_small_test_${n_pts_isolated}_${ground_spike}_${ground_spike} # for file name suffix
-prj_name='base_pars' # for prj dirs and file name suffix
+prj_name=gofst${ground_offset}_gstep${ground_step}_gspike${ground_spike} # for file name suffix
+# prj_name='base_pars' # for prj dirs and file name suffix
 
 out_path=${prj_dir}/data/processed
 log_file=${prj_dir}/logs/lastools/${cur_datetime}_${prj_name}_lidar_pre_post_processing.log
 
-
-#### las params ####
-n_cores=6 # this works for functions that run on tiles but only if we run the functions from the absolute path for some reason
-z_min=2060 # drop pts below this ele
-z_max=2100 # drop pts above this ele
-rm_noise_step=3 # use a [n]x[n]x[n] uniform grid for finding isolated points  
-n_pts_isolated=10 # points are isolated when there is a total of less than [n] points in all neighhour cells  
-ground_offset=0.1 # allows bulginess in ground classification
-ground_step=0.5 # this is what Cob settled with, rough sensitivity by ac to confirm could use more detailed sensitivity analysis on all the lasground params
-ground_spike=0.05 # maddie is using 0.05 but this removes almost all the points
-ground_class=2
-ground_thin_step=0.05
-grount_thin_perc=50 # gets the median for each grid
-#las2dem_ll=0.1 # not used
-las2dem_step=0.1
-las2dem_float_prec=0.00025 # as in staines 2023
-las2dem_max_tin_edge=0.5 # should experiement with this if wanting to remove large areas that should not be interpolated.
-tile_size=50
-buffer=5
 
 echo "######################################################################" | tee -a $log_file
 echo LAStools_process_prepost.sh script started at $cur_datetime under the project name $prj_name | tee -a $log_file
@@ -57,7 +58,29 @@ lastile64 -version 2>&1 | tee -a $log_file
 echo "######################################################################" | tee -a $log_file
 echo | tee -a $log_file
 
-echo entering lidar processing for-loop through the following LAS files $file_list. | tee -a $log_file
+echo "######################################################################" | tee -a $log_file
+echo "PARAMATERS SET FOR THIS RUN" | tee -a $log_file
+echo "n_cores=$n_cores" | tee -a "$log_file"
+echo "z_min=$z_min" | tee -a "$log_file"
+echo "z_max=$z_max" | tee -a "$log_file"
+# echo "rm_noise_step=$rm_noise_step" | tee -a "$log_file"
+# echo "n_pts_isolated=$n_pts_isolated" | tee -a "$log_file"
+echo "ground_offset=$ground_offset" | tee -a "$log_file"
+echo "ground_step=$ground_step" | tee -a "$log_file"
+echo "ground_spike=$ground_spike" | tee -a "$log_file"
+echo "ground_class=$ground_class" | tee -a "$log_file"
+echo "ground_thin_step=$ground_thin_step" | tee -a "$log_file"
+echo "ground_thin_perc=$ground_thin_perc" | tee -a "$log_file"
+# echo "las2dem_ll=$las2dem_ll" | tee -a "$log_file"
+echo "las2dem_step=$las2dem_step" | tee -a "$log_file"
+echo "las2dem_float_prec=$las2dem_float_prec" | tee -a "$log_file"
+echo "las2dem_max_tin_edge=$las2dem_max_tin_edge" | tee -a "$log_file"
+echo "tile_size=$tile_size" | tee -a "$log_file"
+echo "buffer=$buffer" | tee -a "$log_file"
+echo "######################################################################" | tee -a $log_file
+echo | tee -a $log_file
+
+echo Now entering lidar processing for-loop through the following LAS files $file_list. | tee -a $log_file
 echo | tee -a $log_file
 
 for A in $file_list; do
@@ -156,7 +179,7 @@ for A in $file_list; do
     $las_path/lasthin64 -i $out_path_updt/4_tiles_ground/tile*.las \
                   -keep_class $ground_class \
                   -step $ground_thin_step \
-                  -percentile $grount_thin_perc \
+                  -percentile $ground_thin_perc \
                   -odir $out_path_updt/5_tiles_ground_thin \
                   -cores $n_cores
 
@@ -164,21 +187,20 @@ for A in $file_list; do
     echo 
 
     # need merged output for the presnowfall surface the lasheight function
-    # Check if $A equals pre_sf
-    if [ "$A" = "$pre_sf" ]; then
-        # Create directory if it doesn't exist
-        mkdir -p $out_path_updt/06_pre_sf_thin_merge # mkdir if doesnt exist
+    # also merge the post flight for data vis
 
-        echo starting lasmerge64 on file: $A.
+    # Create directory if it doesn't exist
+    mkdir -p $out_path_updt/6_ground_thin_merge # mkdir if doesnt exist
 
-        $las_path/lasmerge64 -i $out_path_updt/5_tiles_ground_thin/tile*.las \
-                -keep_class $ground_class \
-                -drop_withheld \
-                -o "$out_path_updt/06_pre_sf_thin_merge/${A}_06_${prj_name}.las" -olas
+    echo starting lasmerge64 on file: $A.
 
-        echo finished lasmerge64.
-        echo
-    fi
+    $las_path/lasmerge64 -i $out_path_updt/5_tiles_ground_thin/tile*.las \
+            -keep_class $ground_class \
+            -drop_withheld \
+            -o "$out_path_updt/6_ground_thin_merge/${A}_06_${prj_name}.las" -olas
+
+    echo finished lasmerge64.
+    echo
 
     # for the post flight we will normalise it to the pre flight using las height
     if [ "$A" = "$post_sf" ]; then
@@ -190,12 +212,23 @@ for A in $file_list; do
         $las_path/lasheight64 -i $out_path_updt/5_tiles_ground_thin/tile*.las \
                         -keep_class $ground_class \
                         -replace_z \
-                        -ground_points $out_path/${pre_sf:0:6}/06_pre_sf_thin_merge/${pre_sf}_06_${prj_name}.las \
+                        -ground_points $out_path/${pre_sf:0:6}/6_ground_thin_merge/${pre_sf}_06_${prj_name}.las \
                         -odir $out_path_updt/07_post_sf_thin_normalised \
                         -cores $n_cores
 
         echo finished lasthin64.
         echo 
+
+        echo starting lasmerge64 on file: $A.
+        mkdir -p $out_path_updt/08_post_sf_thin_normalised_merge # mkdir if doesnt exist
+
+        $las_path/lasmerge64 -i $out_path_updt/07_post_sf_thin_normalised/*.las \
+                -keep_class $ground_class \
+                -drop_withheld \
+                -o "$out_path_updt/08_post_sf_thin_normalised_merge/${A}_08_${prj_name}.las" -olas
+
+        echo finished lasmerge64.
+        echo
 
         # use above to create dsm from normalised las which is essentially has elevation equal to height of snow for each point. This is instead of creating a dsm for each flight and subtracting later... not sure what is better.
         mkdir -p $out_path_updt/dsm_hs_normalised/$prj_name # mkdir if doesnt exist
@@ -236,8 +269,9 @@ for A in $file_list; do
               -cores $n_cores
 
     echo finished las2dem64.
-    echo 
+    echo
+
 done 2>&1 | tee -a $log_file
 
 echo | tee -a $log_file
-echo reached end of lidar processing script. 
+echo reached end of lidar processing script. | tee -a $log_file
