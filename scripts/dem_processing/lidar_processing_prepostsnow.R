@@ -19,14 +19,18 @@ las_proc_out_path <- '/media/alex/phd-data/local-usask/analysis/lidar-processing
 
 # variables ###########################################################
 
-# ofst0.1_gstep2_gspike0.1 seems to have the best aggreement with our field obs
-prj_name <- 'gofst0.1_gstep2_gspike0.1'
+# 'gstep2_gspike0.1_dem_res0.05_maxinterp0.1_gthinstp0.05' seems to have the
+# best aggreement with our field obs for both flights can see this in the
+# all_error_tbls.csv table
 
-#pre snowfall file name
-pre_snow_id = "23_072"
+prj_name <- 'gstep2_gspike0.1_dem_res0.05_maxinterp0.1_gthinstp0.05'
 
-#post snowfall file name
-post_snow_id = "23_073"
+pre_post_ids <- c('23_072', '23_073')
+# pre_post_ids <- c('23_026', '23_027')
+pre_snow_id = pre_post_ids[1]
+post_snow_id = pre_post_ids[2]
+
+dsm_res_custm <- 0.25 # to coarsen the lastools output dsm
 
 #other variables ######################################################
 
@@ -42,7 +46,7 @@ survey<-read.csv('data/survey_data/survey_points_FT.csv') |>
 survey_gnss_pts_vect <- terra::vect(survey, geom=c("easting_m", "northing_m"), crs = "epsg:32611")
 
 #output Hs_insitu filename
-file_out = paste0(pre_snow_id, "_", post_snow_id, ".tif")
+prefix = paste0(pre_snow_id, "_", post_snow_id)
 
 # functions ##########################################################
 #error metric functions
@@ -111,12 +115,17 @@ pre_index = 1
 post_index = 2
 
 #initialise snow depth raster stack
-SD<-pre_post_dsm_stack[[post_index]]-pre_post_dsm_stack[[pre_index]]
-SD <- SD |> 
-  tidyterra::filter(tile_626850_5632000_gofst0.1_gstep2_gspike0.1> 0)
-
-#output Hs_insitu rasters into data/Hs folder
-terra::writeRaster(SD, paste0('data/dsm_snow_depth/', prj_name, '_', file_out), overwrite = T)
+# SD<-pre_post_dsm_stack[[post_index]]-pre_post_dsm_stack[[pre_index]]
+# names(SD) <- 'snow_depth_m'
+# 
+# perc_99 <- quantile(values(SD), probs = 0.999, na.rm = T)
+# 
+# SD <- SD |> 
+#   tidyterra::filter(snow_depth_m >= 0,
+#                     snow_depth_m < perc_99)
+# 
+# #output Hs_insitu rasters into data/Hs folder
+# terra::writeRaster(SD, paste0('data/dsm_snow_depth/', prefix, '_', prj_name, '.tif'), overwrite = T)
 
 # Snow Depth Calculation Using normalised snow depth ----
 
@@ -134,15 +143,56 @@ norm_rast_sd_tiles <-
   ) |> 
   map(terra::rast) 
 
-norm_rast_merged <- do.call(terra::merge, norm_rast_sd_tiles) |> 
-  tidyterra::filter(tile_626850_5632000_gofst0.1_gstep2_gspike0.1 > 0)
+norm_rast_merged <- do.call(terra::merge, norm_rast_sd_tiles) 
+
+names(norm_rast_merged) <- 'snow_depth_m'
+
+perc_99 <- quantile(values(norm_rast_merged), probs = 0.999, na.rm = T)
+
+norm_rast_merged <- norm_rast_merged |> 
+  tidyterra::filter(snow_depth_m >= 0,
+                    snow_depth_m < perc_99)
 
 terra::writeRaster(
   norm_rast_merged,
-  paste0('data/dsm_snow_depth/', prj_name, '_normalised_', file_out),
+  paste0('data/dsm_snow_depth/', prefix, '_', prj_name, '_normalised.tif'),
   overwrite = T
 )
 
+# Resample Snow Depth DSM to coarser resolution ----
+
+# this is after staines 2023 who avoid lastools interpolation i.e., 5 cm res from lastools to 25 cm res final
+
+bbox <- terra::ext(norm_rast_merged)
+
+# construct raster so cells match up with centre of dots
+template_rast <- terra::rast(
+  resolution = dsm_res_custm,
+  xmin = bbox$xmin,
+  xmax = bbox$xmax,
+  ymin = bbox$ymin,
+  ymax = bbox$ymax,
+  vals = NA_real_,
+  crs = "epsg:32611"
+)
+
+# take the median of the cells w/in out coarser template
+norm_rast_resamp <-
+  terra::resample(norm_rast_merged, template_rast, method = 'med')
+
+terra::writeRaster(
+  norm_rast_resamp,
+  paste0(
+    'data/dsm_snow_depth/',
+    prefix,
+    '_',
+    prj_name,
+    '_normalised_resample_',
+    dsm_res_custm,
+    '.tif'
+  ),
+  overwrite = T
+)
 
 # Compare survey data to LiDAR snow depth non-normalised ---- 
 
@@ -154,12 +204,15 @@ survey$lidar_dsm_z_snow<- terra::extract(post_rast_merged, survey_gnss_pts_vect,
 
 ## Extract snow depth from dsm from survey coords ----
 
-survey$Hs_lidar <- terra::extract(SD, survey_gnss_pts_vect, method = 'bilinear')[,2]
+# bilinear for small resolution and simple for larger res
+# survey$Hs_lidar <- terra::extract(SD, survey_gnss_pts_vect, method = 'bilinear')[,2]
 survey$Hs_lidar_norm <- terra::extract(norm_rast_merged, survey_gnss_pts_vect, method = 'bilinear')[,2]
-survey$bias <- survey$Hs_lidar - survey$Hs_insitu
+survey$Hs_lidar_resamp <- terra::extract(norm_rast_resamp, survey_gnss_pts_vect, method = 'simple')[,2]
+# survey$bias <- survey$Hs_lidar - survey$Hs_insitu
 survey$bias_norm <- survey$Hs_lidar_norm - survey$Hs_insitu
+survey$bias_resamp <- survey$Hs_lidar_resamp - survey$Hs_insitu
 
-ggplot2::ggplot(survey |> filter(Hs_lidar_norm > 0), ggplot2::aes(Hs_insitu, Hs_lidar_norm)) + 
+ggplot2::ggplot(survey |> filter(Hs_lidar_resamp > 0), ggplot2::aes(Hs_insitu, Hs_lidar_resamp)) + 
   ggplot2::geom_point(aes(colour = canopy)) +
   ggplot2::geom_abline()  +
   ggpubr::stat_cor(aes(
@@ -174,7 +227,9 @@ ggplot2::ggplot(survey |> filter(Hs_lidar_norm > 0), ggplot2::aes(Hs_insitu, Hs_
     )),
     geom = "label",
     show.legend = F) +
-  ylab('Normalised Lidar Snow Depth (m)') +
+  ylim(c(0, NA)) +
+  xlim(c(0, NA)) +
+  ylab('Resampled Lidar Snow Depth (m)') +
   xlab('In-situ Snow Depth (m)')
 #plotly::ggplotly()
 
@@ -184,38 +239,7 @@ ggplot2::ggsave(
     post_snow_id,
     '_',
     prj_name,
-    '_snow_depth_Hs_insitu_vs_Hs_lidar_norm.png'
-  ),
-  width = 6,
-  height = 4, device = png
-)
-
-ggplot2::ggplot(survey |> filter(Hs_lidar > 0), ggplot2::aes(Hs_insitu, Hs_lidar)) + 
-  ggplot2::geom_point(aes(colour = canopy)) +
-  ggplot2::geom_abline()  +
-  ggpubr::stat_cor(aes(
-    label = paste(
-      ..rr.label..,
-      if_else(
-        readr::parse_number(..p.label..) < 0.001,
-        "p<0.001",
-        ..p.label..
-      ),
-      sep = "~`, `~"
-    )),
-  geom = "label",
-  show.legend = F) +
-  ylab('Lidar Snow Depth (m)') +
-  xlab('In-situ Snow Depth (m)')
-  #plotly::ggplotly()
-
-ggplot2::ggsave(
-  paste0(
-    'figs/lidar_snow_depth_analysis/pre_post_figs/',
-    post_snow_id,
-    '_',
-    prj_name,
-    '_snow_depth_insitu_vs_lidar.png'
+    '_snow_depth_Hs_insitu_vs_Hs_lidar_resamp.png'
   ),
   width = 6,
   height = 4, device = png
@@ -235,9 +259,9 @@ errors <- survey_select |>
   group_by(Identifier) |> 
   dplyr::summarise(
   prj_name = prj_name,
-  lidar_insitu_Hs_RMSE=RMSE(Hs_insitu,Hs_lidar_norm), #RMSE of survey vs lidar snow depth
-  lidar_insitu_Hs_Bias=bias(Hs_insitu,Hs_lidar_norm), #Bias of survey vs lidar snow depth
-  lidar_insitu_Hs_r2=r2fun(Hs_insitu,Hs_lidar_norm), #R2 of survey vs lidar snow depth
+  lidar_insitu_Hs_RMSE=RMSE(Hs_insitu,Hs_lidar_resamp), #RMSE of survey vs lidar snow depth
+  lidar_insitu_Hs_Bias=bias(Hs_insitu,Hs_lidar_resamp), #Bias of survey vs lidar snow depth
+  lidar_insitu_Hs_r2=r2fun(Hs_insitu,Hs_lidar_resamp), #R2 of survey vs lidar snow depth
   lidar_gnss_z_snow_RMSE=RMSE(gnss_z_snow,lidar_dsm_z_snow),#RMSE of survey vs lidar snow surface elevation 
   lidar_gnss_z_snow_Bias=bias(gnss_z_snow,lidar_dsm_z_snow), #Bias of survey vs lidar snow surface elevation 
   lidar_gnss_z_snow_r2=r2fun(gnss_z_snow,lidar_dsm_z_snow), #Bias of survey vs lidar snow surface elevation 
