@@ -11,7 +11,7 @@ cur_datetime=$(date +"%Y-%m-%d-%H-%M-%S")
 
 #### las params ####
 n_cores=6 # this works for functions that run on tiles but only if we run the functions from the absolute path for some reason
-z_min=2060 # drop pts below this ele
+z_min=2050 # drop pts below this ele
 z_max=2100 # drop pts above this ele
 # rm_noise_step=3 # use a [n]x[n]x[n] uniform grid for finding isolated points  
 # n_pts_isolated=10 # points are isolated when there is a total of less than [n] points in all neighhour cells  
@@ -31,10 +31,9 @@ buffer=5
 #### proj settings ####
 las_path=/home/alex/bin/LAStools/bin
 prj_dir=/media/alex/phd-data/local-usask/analysis/lidar-processing
-shp_clip=${prj_dir}/data/shp/FT_initialClip.shp
-# shp_clip=${prj_dir}/data/shp/fsr_las_clip_very_small.shp
-file_list="23_072_FT_new 23_073_FT_new"
-# file_list="23_026_FT_new 23_027_FT_new"
+shp_clip=${prj_dir}/data/gis/shp/fsr_traj_extent_buff_20m.shp
+# file_list="23_072_FT_new 23_073_FT_new"
+file_list="23_026_FT_new 23_027_FT_new"
 pre_sf_index=1
 post_sf_index=2
 # Convert the file list string into an array
@@ -45,7 +44,7 @@ post_sf="${file_array[$post_sf_index - 1]}"
 
 pt_cld_path="/media/alex/phd-data/local-usask/field-downloads/lidar-data/pointclouds"
 
-prj_name=gstep${ground_step}_gspike${ground_spike}_dem_res${las2dem_step}_maxinterp${las2dem_max_tin_edge}_gthinstp${ground_thin_step} # for file name suffix
+prj_name=params_v1.0.0 # for file name suffix
 # prj_name='base_pars' # for prj dirs and file name suffix
 
 out_path=${prj_dir}/data/processed
@@ -88,73 +87,73 @@ for A in $file_list; do
     prj_base_name="${A:0:6}"
     out_path_updt=${out_path}/${prj_base_name}
 
-#     echo starting lasclip64 on file: $A.
-#     mkdir -p $out_path_updt/clipped # mkdir if doesnt exist
-#     lasclip64 -i "$pt_cld_path/$A.las" \
-#             -drop_z_above $z_max \
-#             -drop_z_below $z_min \
-#             -poly "$shp_clip" \
-#              -o "$out_path_updt/clipped/${A}_clip.las" -v
+    echo starting lasclip64 on file: $A.
+    mkdir -p $out_path_updt/clipped # mkdir if doesnt exist
+    lasclip64 -i "$pt_cld_path/$A.las" \
+            -drop_z_above $z_max \
+            -drop_z_below $z_min \
+            -poly "$shp_clip" \
+             -o "$out_path_updt/clipped/${A}_clip.las" -v
     
-#     echo finished lasclip64.
+    echo finished lasclip64.
+    echo 
+
+    echo starting lasoptimize64 on file: $A.
+
+    mkdir -p $out_path_updt/opt # mkdir if doesnt exist
+    lasoptimize64 -i "$out_path_updt/clipped/${A}_clip.las" \
+             -o "$out_path_updt/opt/${A}_opt.las" \
+             # -cores $n_cores this is ingored since only one input file
+
+    echo finished lasoptimize64.
+    echo 
+
+    # create temporary tile directory
+    rm -rf $out_path_updt/1_tiles
+    mkdir $out_path_updt/1_tiles
+    
+    echo starting lastile64 on file: $A.
+    
+    # create a temporary tiling with tile size and buffer 30
+    lastile64 -i "$out_path_updt/opt/${A}_opt.laz" \
+             -set_classification 0 \
+             -tile_size $tile_size -buffer $buffer -flag_as_withheld \
+             -o $out_path_updt/1_tiles/tile.las \
+             # -cores $n_cores not advised by lastools...
+
+    echo finished lastile64.
+    echo 
+
+# commented out as currently not removing any points
+#     rm -rf $out_path_updt/2_tiles_denoised
+#     mkdir $out_path_updt/2_tiles_denoised
+
+#     echo starting lasnoise64 on file: $A.
+    
+#     $las_path/lasnoise64 -i $out_path_updt/1_tiles/tile*.las \
+#              -step $rm_noise_step -isolated $n_pts_isolated \
+#              -classify_as 31 \
+#              -odir $out_path_updt/2_tiles_denoised \
+#              -remove_noise \
+#              -cores $n_cores
+
+#     echo finished lasnoise64.
 #     echo 
 
-#     echo starting lasoptimize64 on file: $A.
-
-#     mkdir -p $out_path_updt/opt # mkdir if doesnt exist
-#     lasoptimize64 -i "$out_path_updt/clipped/${A}_clip.las" \
-#              -o "$out_path_updt/opt/${A}_opt.las" \
-#              # -cores $n_cores this is ingored since only one input file
-
-#     echo finished lasoptimize64.
-#     echo 
-
-#     # create temporary tile directory
-#     rm -rf $out_path_updt/1_tiles
-#     mkdir $out_path_updt/1_tiles
+    rm -rf $out_path_updt/3_tiles_sorted
+    mkdir $out_path_updt/3_tiles_sorted
     
-#     echo starting lastile64 on file: $A.
-    
-#     # create a temporary tiling with tile size and buffer 30
-#     lastile64 -i "$out_path_updt/opt/${A}_opt.laz" \
-#              -set_classification 0 \
-#              -tile_size $tile_size -buffer $buffer -flag_as_withheld \
-#              -o $out_path_updt/1_tiles/tile.las \
-#              # -cores $n_cores not advised by lastools...
+    echo starting lassort64 on file: $A.
 
-#     echo finished lastile64.
-#     echo 
+    $las_path/lassort64 -i $out_path_updt/1_tiles/*.las \
+            -odir $out_path_updt/3_tiles_sorted -olas \
+            -cores $n_cores
 
-# # commented out as currently not removing any points
-# #     rm -rf $out_path_updt/2_tiles_denoised
-# #     mkdir $out_path_updt/2_tiles_denoised
+    echo finished lassort64.
+    echo 
 
-# #     echo starting lasnoise64 on file: $A.
-    
-# #     $las_path/lasnoise64 -i $out_path_updt/1_tiles/tile*.las \
-# #              -step $rm_noise_step -isolated $n_pts_isolated \
-# #              -classify_as 31 \
-# #              -odir $out_path_updt/2_tiles_denoised \
-# #              -remove_noise \
-# #              -cores $n_cores
-
-# #     echo finished lasnoise64.
-# #     echo 
-
-#     rm -rf $out_path_updt/3_tiles_sorted
-#     mkdir $out_path_updt/3_tiles_sorted
-    
-#     echo starting lassort64 on file: $A.
-
-#     $las_path/lassort64 -i $out_path_updt/1_tiles/*.las \
-#             -odir $out_path_updt/3_tiles_sorted -olas \
-#             -cores $n_cores
-
-#     echo finished lassort64.
-#     echo 
-
-#     rm -rf $out_path_updt/4_tiles_ground
-#     mkdir $out_path_updt/4_tiles_ground
+    rm -rf $out_path_updt/4_tiles_ground
+    mkdir $out_path_updt/4_tiles_ground
     
     echo starting lasground_new64 on file: $A.
 
@@ -204,7 +203,8 @@ for A in $file_list; do
 
     # for the post flight we will normalise it to the pre flight using las height
     if [ "$A" = "$post_sf" ]; then
-        mkdir -p $out_path_updt/07_post_sf_thin_normalised # mkdir if doesnt exist
+        rm -rf $out_path_updt/07_post_sf_thin_normalised
+        mkdir $out_path_updt/07_post_sf_thin_normalised # mkdir if doesnt exist
         echo starting lasheight64 using:
         echo Pre SF: $pre_sf.
         echo Post SF: $post_sf.
