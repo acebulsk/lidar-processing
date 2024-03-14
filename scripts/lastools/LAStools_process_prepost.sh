@@ -46,7 +46,7 @@ buffer=5
 
 echo "######################################################################" | tee -a $log_file
 echo LAStools_process_prepost.sh script started at $cur_datetime under the project name $prj_name | tee -a $log_file
-lastile64 -version 2>&1 | tee -a $log_file
+$las_path/lastile64 -version 2>&1 | tee -a $log_file
 echo "######################################################################" | tee -a $log_file
 echo | tee -a $log_file
 
@@ -82,7 +82,7 @@ for A in $file_list; do
 
     echo starting lasclip64 on file: $A.
     mkdir -p $out_path_updt/clipped # mkdir if doesnt exist
-    lasclip64 -i "$pt_cld_path/$A.las" \
+    $las_path/lasclip64 -i "$pt_cld_path/$A.las" \
             -drop_z_above $z_max \
             -drop_z_below $z_min \
             -poly "$shp_clip" \
@@ -94,7 +94,7 @@ for A in $file_list; do
     echo starting lasoptimize64 on file: $A.
 
     mkdir -p $out_path_updt/opt # mkdir if doesnt exist
-    lasoptimize64 -i "$out_path_updt/clipped/${A}_clip.las" \
+    $las_path/lasoptimize64 -i "$out_path_updt/clipped/${A}_clip.las" \
              -o "$out_path_updt/opt/${A}_opt.las" \
              # -cores $n_cores this is ingored since only one input file
 
@@ -108,7 +108,7 @@ for A in $file_list; do
     echo starting lastile64 on file: $A.
     
     # create a temporary tiling with tile size and buffer 30
-    lastile64 -i "$out_path_updt/opt/${A}_opt.laz" \
+    $las_path/lastile64 -i "$out_path_updt/opt/${A}_opt.laz" \
              -set_classification 0 \
              -tile_size $tile_size -buffer $buffer -flag_as_withheld \
              -o $out_path_updt/1_tiles/tile.las \
