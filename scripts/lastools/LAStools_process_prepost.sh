@@ -27,7 +27,7 @@ fi
 source $config_file
 
 #### las params ####
-z_min=2050 # drop pts below this ele
+z_min=2020 # drop pts below this ele
 z_max=2100 # drop pts above this ele
 # rm_noise_step=3 # use a [n]x[n]x[n] uniform grid for finding isolated points  
 # n_pts_isolated=10 # points are isolated when there is a total of less than [n] points in all neighhour cells  
@@ -41,6 +41,7 @@ ground_thin_perc=50 # gets the median for each grid
 las2dem_step=0.05 # as in staines 2023
 las2dem_float_prec=0.00025 # as in staines 2023
 las2dem_max_tin_edge=0.1 # as in staines 2023
+las2dem_max_tin_edge_interp=20 # fill all gaps so we have continuous surface for voxrs
 tile_size=50
 buffer=5
 
@@ -262,6 +263,25 @@ for A in $file_list; do
               -cores $n_cores
 
     echo finished las2dem64.
+    echo
+
+    mkdir -p $out_path_updt/dsm_interpolated/$prj_name # mkdir if doesnt exist
+
+    echo starting las2dem64 with full interpolation on file: $A.
+
+    $las_path/las2dem64 -i $out_path_updt/5_tiles_ground_thin/tile*.las \
+              -step $las2dem_step \
+              -kill $las2dem_max_tin_edge_interp \
+              -keep_class 2 \
+              -odir $out_path_updt/dsm_interpolated/$prj_name \
+              -odix _$prj_name \
+              -float_precision $las2dem_float_prec \
+              -obil \
+              -use_tile_bb \
+              -vv \
+              -cores $n_cores
+
+    echo finished las2dem64 with full interpolation.
     echo
 
 done 2>&1 | tee -a $log_file
