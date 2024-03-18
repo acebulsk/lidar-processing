@@ -10,7 +10,7 @@
 cur_datetime=$(date +"%Y-%m-%d-%H-%M-%S")
 
 # Check if the config file argument is provided
-if [ $# -ne 1 ]; then
+if [ $# -ne 2 ]; then
     echo "Usage: $0 <config_file>"
     exit 1
 fi
@@ -23,6 +23,15 @@ if [ ! -f "$config_file" ]; then
     echo "Error: File $config_file not found."
     exit 1
 fi
+
+# Get the run id argument, this id is used to define the set of flights
+if [ "$#" -lt 2 ]; then
+    echo "Usage: $0 <run_id>"
+    echo "This id corresponds to the index of flight pairs we have defined within the config file."
+    exit 1
+fi
+
+run_id=$2
 
 source $config_file
 
@@ -47,6 +56,7 @@ buffer=5
 
 echo "######################################################################" | tee -a $log_file
 echo LAStools_process_prepost.sh script started at $cur_datetime under the project name $prj_name | tee -a $log_file
+echo "Using flight pair: ${file_list[@]}"
 $las_path/lastile64 -version 2>&1 | tee -a $log_file
 echo "######################################################################" | tee -a $log_file
 echo | tee -a $log_file
@@ -68,15 +78,16 @@ echo "ground_thin_perc=$ground_thin_perc" | tee -a "$log_file"
 echo "las2dem_step=$las2dem_step" | tee -a "$log_file"
 echo "las2dem_float_prec=$las2dem_float_prec" | tee -a "$log_file"
 echo "las2dem_max_tin_edge=$las2dem_max_tin_edge" | tee -a "$log_file"
+echo "las2dem_max_tin_edge_interp=$las2dem_max_tin_edge_interp" | tee -a "$log_file"
 echo "tile_size=$tile_size" | tee -a "$log_file"
 echo "buffer=$buffer" | tee -a "$log_file"
 echo "######################################################################" | tee -a $log_file
 echo | tee -a $log_file
 
-echo Now entering lidar processing for-loop through the following LAS files $file_list. | tee -a $log_file
+echo "Now entering lidar processing for-loop through the following LAS files ${file_list[@]}." | tee -a $log_file
 echo | tee -a $log_file
 
-for A in $file_list; do
+for A in "${file_list[@]}"; do
 
     prj_base_name="${A:0:6}"
     out_path_updt=${out_path}/${prj_base_name}
@@ -288,4 +299,4 @@ done 2>&1 | tee -a $log_file
 
 echo | tee -a $log_file
 echo reached end of lidar processing script. | tee -a $log_file
-notify-send "LAStools Processing Bash Script:" "Finished processing files: $file_list \n under the project name: $prj_name."
+notify-send "LAStools Processing Bash Script:" "Finished processing files: ${file_list[@]} \n under the project name: $prj_name."
