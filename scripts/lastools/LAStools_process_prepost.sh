@@ -299,4 +299,4 @@ done 2>&1 | tee -a $log_file
 
 echo | tee -a $log_file
 echo reached end of lidar processing script. | tee -a $log_file
-notify-send "LAStools Processing Bash Script:" "Finished processing files: ${file_list[@]} \n under the project name: $prj_name."
+notify-send "LAStools Processing Bash Script:" "Finished processing files: $pre_sf and $post_sf \n under the project name: $prj_name."
