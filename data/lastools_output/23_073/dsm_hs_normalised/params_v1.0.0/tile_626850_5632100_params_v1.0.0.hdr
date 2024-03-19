@@ -1,0 +1,13 @@
+# created by LAStools (c) info@rapidlasso.de
+nrows 1000
+ncols 1000
+nbands 1
+nbits 32
+layout bil
+nodata -9999
+byteorder I
+ulxmap 626850.025000
+ulymap 5632149.975000
+xdim 0.05
+ydim 0.05
+pixeltype float
