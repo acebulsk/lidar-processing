@@ -45,7 +45,6 @@ vignettes/*.pdf
 *.kml
 *.tif
 *.csv
-data/shp/
-prepost_data/shp/
+data/
 *.html
 *.qgz
