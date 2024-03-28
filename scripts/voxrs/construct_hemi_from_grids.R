@@ -11,6 +11,7 @@ library(sf)
 library(purrr)
 library(rhdf5)
 library(dplyr)
+library(pbapply)
 
 # h5path <- '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/voxrs/outputs/grid_resampling/grid_resampled_23_072_vox_len_0.25m__gridgen_FSR_NE_t0_14.h5'
 # h5readAttributes(file = h5path, name = 'p1_t10')
@@ -22,7 +23,13 @@ theta_from <- 0
 theta_to <- 359
 theta_by <- 1
 
-plot_name <- 'FSR_NE'
+# plot_name <- 'FSR_NW'
+# plot_name <- 'FSR_NE'
+# plot_name <- 'FSR_S'
+# plot_name <- 'PWL_E'
+plot_name <- 'PWL_N'
+# plot_name <- 'PWL_SW'
+
 vox_id <- '23_026' # which day do we want canopy metrics for?
 vox_config_id <- '23_026_vox_len_0.25m_'
 vox_runtag <- paste0('_gridgen_', plot_name)
@@ -139,7 +146,7 @@ regress_mcn_ip <- function(phi_theta_pairs, ip_df){
   
 }
 
-cor_list_out <- lapply(phi_theta_list, regress_mcn_ip, ip_df = ip_pts)
+# cor_list_out <- lapply(phi_theta_list, regress_mcn_ip, ip_df = ip_pts)
 cor_list_out <-
   pbapply::pblapply(phi_theta_list, regress_mcn_ip, ip_df = ip_pts, cl = 8)
 
