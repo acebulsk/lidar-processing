@@ -2,6 +2,7 @@
 library(terra)
 library(sf)
 library(dplyr)
+library(viridis)
 
 # constants ----
 rho_water <- 1000 # kg/m3
@@ -17,7 +18,7 @@ lidr_sd_path <- paste0(
   prj_name,
   '_normalised_resample_',
   dsm_res_custm,
-  '.tif'
+  '_bias_corrected.tif'
 )
 
 lidr_swe_path <- paste0(
@@ -60,8 +61,37 @@ lidr_swe_kg_m2 <- lidr_sd * event_fsd_rho
 
 names(lidr_swe_kg_m2) <- 'swe_kg_m2'
 
-plot(lidr_sd, main = 'Snow Depth (m)')
-plot(lidr_swe_kg_m2, main = 'SWE kg (m-2)')
+# Save the plot for lidr_sd
+png(paste0(
+  'figs/maps/',
+  pre_post_ids[1],
+  '_',
+  pre_post_ids[2],
+  '_',
+  prj_name,
+  'sd_normalised_resample_',
+  dsm_res_custm,
+  '.png'
+), width = 600, height = 400, res = 125)  # You can adjust width and height as needed
+plot(lidr_sd, main = '𝚫 Snow Depth (m)', col = viridis(100))
+plot(fsr_plots, add = T, col = NA, border = 'red', lwd = 1.5)
+dev.off()
+
+# Save the plot for lidr_sd
+png(paste0(
+  'figs/maps/',
+  pre_post_ids[1],
+  '_',
+  pre_post_ids[2],
+  '_',
+  prj_name,
+  'swe_normalised_resample_',
+  dsm_res_custm,
+  '.png'
+), width = 600, height = 400, res = 125)  # You can adjust width and height as needed
+plot(lidr_swe_kg_m2, main = '𝚫 SWE (kg m⁻²)', col = viridis(100))
+plot(fsr_plots, add = T, col = NA, border = 'red', lwd = 1.5)
+dev.off()
 
 writeRaster(lidr_swe_kg_m2, lidr_swe_path,  overwrite = T)
 

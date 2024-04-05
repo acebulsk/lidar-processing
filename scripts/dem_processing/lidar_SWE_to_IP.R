@@ -51,7 +51,9 @@ pwl_sf_event <- pwl_sf |>
   mutate(event_pc = cumsum(ppt))
 
 ggplot(pwl_sf_event, aes(datetime, event_pc)) +
-  geom_line()
+  geom_line() +
+  ylab('Cumulative Snowfall (mm)') +
+  xlab(element_blank())
 
 del_sf <- sum(pwl_sf_event$ppt)
 
@@ -77,6 +79,58 @@ terra::writeRaster(
     'ip_normalised_resample_0.25.tif'
   ),  overwrite = T
 )
+
+# Save the plot for lidr_sd
+png(paste0(
+  'figs/maps/',
+  pre_post_ids[1],
+  '_',
+  pre_post_ids[2],
+  '_',
+  prj_name,
+  'ip_normalised_resample_',
+  dsm_res_custm,
+  '.png'
+), width = 1000, height = 800, res = 200)  # You can adjust width and height as needed
+plot(ip_rast, main = 'I/P (-)', col = viridis(100))
+plot(fsr_plots, add = T, col = NA, border = 'red', lwd = 1.5)
+dev.off()
+
+# plot just PWL SW
+
+pwl_e <- fsr_plots |> filter(name == 'PWL_E')
+
+# Save the plot for lidr_sd
+png(paste0(
+  'figs/maps/pwl_e_',
+  pre_post_ids[1],
+  '_',
+  pre_post_ids[2],
+  '_',
+  prj_name,
+  'ip_normalised_resample_',
+  dsm_res_custm,
+  '.png'
+), width = 1000, height = 800, res = 200)
+plot(terra::crop(ip_rast, pwl_e, mask = T), main = 'PWL E: I/P (-)', col = viridis(100))
+dev.off()
+
+fsr_s <- fsr_plots |> filter(name == 'FSR_S')
+
+# Save the plot for lidr_sd
+png(paste0(
+  'figs/maps/fsr_s_',
+  pre_post_ids[1],
+  '_',
+  pre_post_ids[2],
+  '_',
+  prj_name,
+  'ip_normalised_resample_',
+  dsm_res_custm,
+  '.png'
+), width = 1000, height = 800, res = 200)
+plot(terra::crop(ip_rast, fsr_s, mask = T), main = 'FSR S: I/P (-)', col = viridis(100))
+dev.off()
 
 # crop to study zone
 

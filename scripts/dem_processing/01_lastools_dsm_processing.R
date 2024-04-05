@@ -187,8 +187,8 @@ ggplot2::ggplot(survey |> filter(Hs_lidar_resamp > 0), ggplot2::aes(Hs_insitu, H
     show.legend = F) +
   ylim(c(0, NA)) +
   xlim(c(0, NA)) +
-  ylab('Resampled Lidar Snow Depth (m)') +
-  xlab('In-situ Snow Depth (m)')
+  ylab('Bias Corrected Resampled Lidar 𝚫 Snow Depth (m)') +
+  xlab('In-situ 𝚫 Snow Depth (m)')
 #plotly::ggplotly()
 
 ggplot2::ggsave(
@@ -232,3 +232,74 @@ write.csv(errors, paste0('data/error_summary/error_table_pre_post_', post_snow_i
 error_tbl_files <- list.files('data/error_summary/', pattern = 'error_table*', full.names = T)
 all_err_tbls <- purrr::map_dfr(error_tbl_files, read.csv)
 write.csv(all_err_tbls, 'data/error_summary/all_error_tbls.csv', row.names = F)
+
+# plot bias corrected lidar 
+mean_bias <- errors$lidar_insitu_Hs_Bias |> round(2)
+r2 <- errors$lidar_insitu_Hs_r2 |> round(2)
+rmse <- errors$lidar_insitu_Hs_RMSE |> round(2)
+
+label_vect <- c(
+  paste0("italic(R) ^ 2  ==", r2),
+  paste0("Mean~Bias~(m)  ==", mean_bias),
+  paste0("RMSE~(m)  ==", rmse))
+
+ggplot2::ggplot(survey |> filter(Hs_lidar_resamp > 0), ggplot2::aes(Hs_insitu, Hs_lidar_resamp - mean_bias)) + 
+  ggplot2::geom_point(aes(colour = canopy)) +
+  ggplot2::geom_abline()  +
+  annotate("text", x = rep(0.1, 3), y = c(0.5, 0.45, 0.4)-0.1, label = label_vect, parse = TRUE) +
+  # ggpubr::stat_cor(aes(
+  #   label = paste(
+  #     ..rr.label..,
+  #     if_else(
+  #       readr::parse_number(..p.label..) < 0.001,
+  #       "p<0.001",
+  #       ..p.label..
+  #     ),
+  #     sep = "~`, `~"
+  #   )),
+  #   geom = "label",
+  #   show.legend = F) +
+  ylim(c(0, NA)) +
+  xlim(c(0, NA)) +
+  ylab('Bias Corrected Resampled Lidar 𝚫 Snow Depth (m)') +
+  xlab('In-situ 𝚫 Snow Depth (m)')
+
+ggplot2::ggsave(
+  paste0(
+    'figs/lidar_snow_depth_analysis/pre_post_figs/',
+    post_snow_id,
+    '_',
+    prj_name,
+    '_snow_depth_Hs_insitu_vs_Hs_lidar_resamp_bias_corrected.png'
+  ),
+  width = 6,
+  height = 4, device = png
+)
+
+# write out bias corrected rasters
+
+terra::writeRaster(
+  norm_rast_resamp - errors$lidar_insitu_Hs_Bias,
+  paste0(
+    'data/dsm_snow_depth/',
+    prefix,
+    '_',
+    prj_name,
+    '_normalised_resample_',
+    dsm_res_custm,
+    '_bias_corrected.tif'
+  ),
+  overwrite = T
+)
+
+terra::writeRaster(
+  norm_rast_merged_crop - errors$lidar_insitu_Hs_Bias,
+  paste0(
+    'data/dsm_snow_depth/',
+    prefix,
+    '_',
+    prj_name,
+    '_normalised_resample_crop_mask_bias_corrected.tif'
+  ),
+  overwrite = T
+)

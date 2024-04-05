@@ -23,9 +23,10 @@ las_proc_out_path <- '/media/alex/phd-data/local-usask/analysis/lidar-processing
 
 prj_name <- 'params_v1.0.0'
 
+# pre_post_ids <- c('22_045', '22_047')
 # pre_post_ids <- c('22_066', '22_068')
-# pre_post_ids <- c('23_072', '23_073')
-pre_post_ids <- c('23_026', '23_027')
+pre_post_ids <- c('23_072', '23_073')
+# pre_post_ids <- c('23_026', '23_027')
 pre_snow_id = pre_post_ids[1]
 post_snow_id = pre_post_ids[2]
 
