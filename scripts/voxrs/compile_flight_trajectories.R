@@ -5,7 +5,7 @@ library(tidyverse)
 library(sf)
 
 # eventually loop through surveys of interest
-surv_id <- '23_027'
+surv_id <- '22_047'
 traj_path <- '/media/alex/phd-data/local-usask/field-downloads/lidar-data/metadata/trajectory_files/'
 
 traj_paths <- 

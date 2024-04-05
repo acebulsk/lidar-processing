@@ -1,9 +1,9 @@
 ---
 # DATA INPUT PARAMETERS
-config_id: 'fsr_test_23_072' # (str) - unique identifier for this configuration, used for voxel space identification (use same in config 2)
+config_id: '23_072_vox_len_1m' # (str) - unique identifier for this configuration, used for voxel space identification (use same in config 2)
 working_dir: '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/voxrs' # (str) - working directory for intermediate and output files (use same in config 2)
-
-las_in: '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/lastools/class_points/23_072_FT_class_denoise_0.5_0.5.las' # (str) - complete path to input .las file
+# las_in: /media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/1_tiles/tile_626850_5632000.las # small testing area over powerline, full area takes like 30 mins
+las_in: '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/clipped/23_072_FT_new_clip.las' # (str) - complete path to input .las file
 traj_in: '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/voxrs/metadata/23_072_all_lidar_trajectory.txt' # (str) - complete path to trajectory file (.csv) corresponding to las file.
           # trajectory file must include the following header labels: Time[s], Easting[m], Northing[m], Height[m]
           # make sure the time units in the las file and traj file are the same. Standard GPS time is better than GPS seconds of the week. 

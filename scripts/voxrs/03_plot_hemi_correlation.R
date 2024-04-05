@@ -1,10 +1,5 @@
-library(ggplot2)
 
-vox_id <- '23_026' # which day do we want canopy metrics for?
-vox_config_id <- '23_026_vox_len_0.25m_'
-vox_runtag <- '_gridgen_FSR_NE'
-las_prj_name <- 'params_v1.0.0'
-# hemi_list <- readRDS('data/hemi_stats/t0_14_correlation_grid_resampled_23_072_vox_len_1m_1m_abg_gridgen_h5_multi_dataset_sliced.h5')
+
 hemi_list <- readRDS(paste0('data/hemi_stats/full_hemi_correlation_grid_resampled_',
                             vox_config_id,
                             vox_runtag,
@@ -17,6 +12,17 @@ colnames(hemi_df) <- c('phi_d',
                        'theta_d',
                        'rp',
                        'rs')
+
+hemi_df |> 
+  filter(rs > .5,
+         phi_d > 20) |> 
+  pull(theta_d) |> 
+  mean()
+
+hemi_df |> 
+  filter(rs > .5,) |> 
+  pull(phi_d) |> 
+  mean()
 
 # hemi_df$id <- row.names(hemi_df) |> as.numeric()
 
@@ -122,13 +128,13 @@ ggsave(paste0('figs/voxrs_ip_regressions/full_hemi_rho_p_cor_mcn_ip_',
 # # use plotly since ggplot doesnt allow changing angle of r axis
 # 
 # library(plotly)
-# 
-# 
+# # 
+# # 
 # plot_ly(
 #   hemi_df,
 #   type = 'scatterpolargl',
 #   mode = 'markers'
-# ) |> 
+# ) |>
 #   # layout(
 #   #   xaxis = list(showgrid = FALSE,
 #   #                showticklabels = 'none'),
@@ -157,8 +163,8 @@ ggsave(paste0('figs/voxrs_ip_regressions/full_hemi_rho_p_cor_mcn_ip_',
 # #   xaxis = list(
 # #     title = c("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 # #   )
-# # ) |> 
+# # ) |>
 # add_trace(  r = ~phi_d,
 #             theta = ~theta_d,
 #             color = ~rs,
-#             opacity = 0.2) 
+#             opacity = 0.2)

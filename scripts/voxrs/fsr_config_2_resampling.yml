@@ -1,8 +1,8 @@
 ---
 # DATA INPUT PARAMETERS
-config_id: '23_072_vox_len_1m' # (str) - unique identifier for this configuration, used for voxel space identification (use same in config 1)
+config_id: '23_072_vox_len_0.25m' # (str) - unique identifier for this configuration, used for voxel space identification (use same in config 1)
 working_dir: '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/voxrs' # (str) - working directory for intermediate and output files (use same in config 1)
-runtag: '1m_abg_p0_90_t0_360_by_1'  # (str) - to be incorporated in output file names to destinguish between different runs. Blank string is fine.
+runtag: ''  # (str) - to be incorporated in output file names to destinguish between different runs. Blank string is fine.
 
 # VOLUMETRIC RESAMPLING PARAMETERS
 resample_las: False   # (bool) - Do you want to generate a resampled point cloud? (if False, subsequent parameters are ignored)
@@ -14,7 +14,7 @@ sample_threshold: 0  # (int) noise filter will drop all returns from voxels wher
     # and the standard deviation (aka baysiean uncertainty) [band1] for select phi/theta angles 
     # if a list of phi/theta angles is given then multiple separate geotiffs are generated
 
-resample_grid: True # (bool) - Do you want to resample at a fixed angle across a grid? (if False, subsequent parameters are ignored)
+resample_grid: False # (bool) - Do you want to resample at a fixed angle across a grid? (if False, subsequent parameters are ignored)
 # offset above ground is handeled by dsm creation here
 dem_in: '/home/alex/local-usask/analysis/lidar-processing/data/dsm_interpolated_elevation/23_072_params_v1.0.0_dsm_elevation_resamp_crop_mask_ofst_abv_grnd_1m.tif' # (str) complete path to raster (geotif) file with coordinates and elevations at which to calculate hemispheres, masked to points of interest
 phi_theta_file: ''
@@ -36,14 +36,14 @@ theta: [0, 359, 1] # min, max, by
         # template[(rays_out.y_index.values, rays_out.x_index.values, 0)] = rays_out.returns_mean
         # template[(rays_out.y_index.values, rays_out.x_index.values, 1)] = rays_out.returns_std
 
-resample_hemi: False # (bool) - Do you want to generate synthetic hemispheres? (if False, subsequent parameters are ignored)
+resample_hemi: True # (bool) - Do you want to generate synthetic hemispheres? (if False, subsequent parameters are ignored)
 pts_in: '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/survey_data/23_073_fsd_gnss_survey_points.csv'  # (str) complete path to .csv file with coordinates and elevations at which to calculate hemispheres
             # pts file must include the following header labels: id, easting_m, northing_m, elev_m
 img_size: 181  # angular resolution ~ # of samples across 180 deg
 max_phi_deg: 90  # (num) maximum zenith angle to sample [deg] (90 deg samples to horizon) 
 hemi_m_above_ground: 0.25  # height [m] above ground points (pts_in) at which to generate hemispheres, if height == 0 can result in sharp boundaries on the hemi output images, 25 cm as in staines 2023
 tile_count_1d: 1  # (int) number of square tiles along one side (total # of tiles = tile_count_1d^2)
-n_cores: 6  # (int) number of processing cores
+n_cores: 2  # (int) number of processing cores
 
 # GENERAL RESAMPLING PARAMETERS (for all types of resampling)
 max_distance: 50  # maximum distance [m] to sample ray (balance computation time with accuracy at distance)
