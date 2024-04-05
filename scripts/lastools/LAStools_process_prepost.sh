@@ -31,7 +31,7 @@ if [ "$#" -lt 2 ]; then
     exit 1
 fi
 
-run_id=$2
+run_id=$2 # run id is passed to the config file which selects the event... this is how we lazy parallelize this
 
 source $config_file
 

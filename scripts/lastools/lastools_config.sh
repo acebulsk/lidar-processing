@@ -23,5 +23,5 @@ prj_name=params_v1.0.0 # for file name suffix
 # prj_name='base_pars' # for prj dirs and file name suffix
 
 out_path=${prj_dir}/data/processed
-log_file=${prj_dir}/logs/lastools/${cur_datetime}_${prj_name}_lidar_pre_post_processing.log
+log_file=${prj_dir}/logs/lastools/${cur_datetime}_${prj_name}_${pre_sf}_${post_sf}_lidar_pre_post_processing.log
 
