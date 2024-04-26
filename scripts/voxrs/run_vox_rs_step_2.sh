@@ -15,7 +15,7 @@ log_file="/media/alex/phd-data/local-usask/analysis/lidar-processing/logs/voxrs/
 
 echo "######################################################################" | tee -a $log_file
 echo run_vox_rs_step_2.sh script started at $cur_datetime | tee -a $log_file
-echo Using the yaml file: $step_1_yaml | tee -a $log_file
+echo Using the yaml file: $step_2_yaml | tee -a $log_file
 echo "######################################################################" | tee -a $log_file
 echo | tee -a $log_file
 

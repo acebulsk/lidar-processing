@@ -2,6 +2,7 @@
 
 # this script runs the first step of the voxrs processing pipeline
 # make sure to edit the yml file in this dir
+# to run this just type ./run_vox_rs_step_1.sh on the command line which auto sets up the conda env with the dependancies 
 
 cur_datetime=$(date +"%Y-%m-%d-%H-%M-%S")
 
