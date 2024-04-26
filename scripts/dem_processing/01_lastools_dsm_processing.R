@@ -10,7 +10,9 @@
 
 #location of field data (output from rover_snow_processing.R) 
 survey<-read.csv('data/survey_data/survey_points_FT.csv') |> 
-  filter(Identifier == post_snow_id)
+  filter(Identifier == post_snow_id,
+         is.na(Hs_insitu) == F)
+
 survey_gnss_pts_vect <- terra::vect(survey, geom=c("easting_m", "northing_m"), crs = "epsg:32611")
 
 if(nrow(survey) == 0){
@@ -22,8 +24,8 @@ prefix = paste0(pre_snow_id, "_", post_snow_id)
 
 # Snow Depth Calculation by DSM subtraction ----
 
-## merge PRE dsm outputs for each survey ----
-
+# # merge PRE dsm outputs for each survey ----
+# 
 # pre_rast_tiles <-
 #   list.files(
 #     paste0(las_proc_out_path,
@@ -31,8 +33,8 @@ prefix = paste0(pre_snow_id, "_", post_snow_id)
 #            "/dsm/", prj_name),
 #     pattern = '\\.bil$',
 #     full.names = T
-#   ) |> 
-#   map(terra::rast) 
+#   ) |>
+#   map(terra::rast)
 # 
 # pre_rast_merged <- do.call(terra::merge, pre_rast_tiles)
 # 
@@ -46,7 +48,7 @@ prefix = paste0(pre_snow_id, "_", post_snow_id)
 #     pattern = '\\.bil$',
 #     full.names = T
 #   ) |>
-#   map(terra::rast) 
+#   map(terra::rast)
 # 
 # post_rast_merged <- do.call(terra::merge, post_rast_tiles)
 # 
@@ -57,8 +59,8 @@ prefix = paste0(pre_snow_id, "_", post_snow_id)
 # # define the index of the pre and post snowfall layers
 # pre_index = 1
 # post_index = 2
-
-#initialise snow depth raster stack
+# 
+# #initialise snow depth raster stack
 # SD<-pre_post_dsm_stack[[post_index]]-pre_post_dsm_stack[[pre_index]]
 # names(SD) <- 'snow_depth_m'
 # 
@@ -80,7 +82,7 @@ norm_rast_sd_tiles <-
   list.files(
     paste0(las_proc_out_path,
            post_snow_id,
-           "/dsm_hs_normalised/", prj_name),
+           "_gcp_outlier/dsm_hs_normalised/", prj_name),
     pattern = '\\.bil$',
     full.names = T
   ) |> 
@@ -90,10 +92,14 @@ norm_rast_merged <- do.call(terra::merge, norm_rast_sd_tiles)
 
 names(norm_rast_merged) <- 'snow_depth_m'
 
+plot(norm_rast_merged)
+
 perc_99 <- quantile(values(norm_rast_merged), probs = 0.999, na.rm = T)
 
 norm_rast_merged <- ifel(norm_rast_merged < 0, NA, norm_rast_merged)
 norm_rast_merged <- ifel(norm_rast_merged >= perc_99, NA, norm_rast_merged)
+
+plot(norm_rast_merged)
 
 terra::writeRaster(
   norm_rast_merged,
@@ -170,24 +176,66 @@ survey$Hs_lidar_resamp <- terra::extract(norm_rast_resamp, survey_gnss_pts_vect,
 survey$bias_norm <- survey$Hs_lidar_norm - survey$Hs_insitu
 survey$bias_resamp <- survey$Hs_lidar_resamp - survey$Hs_insitu
 
+# normalised is slightly worse statistically but has more data under the canopy
+# so going to use this from now on, compare the tifs in qgis to see
+
+#error summary
+survey_select<-survey |> 
+  dplyr::filter(Identifier == post_snow_id) |> 
+  mutate(prj_name = prj_name) |> 
+  select(Identifier, prj_name, everything())
+write.csv(survey_select, paste0('data/lidar_w_survey_hs/survey_data_pre_post_', post_snow_id, '_', prj_name, '.csv'))
+
+errors <- survey_select |> 
+  group_by(Identifier) |> 
+  dplyr::summarise(
+    prj_name = prj_name,
+    lidar_insitu_Hs_RMSE=RMSE(Hs_insitu,Hs_lidar_resamp), #RMSE of survey vs lidar snow depth
+    lidar_insitu_Hs_Bias=bias(Hs_insitu,Hs_lidar_resamp), #Bias of survey vs lidar snow depth
+    lidar_insitu_Hs_r2=r2fun(Hs_insitu,Hs_lidar_resamp), #R2 of survey vs lidar snow depth
+    # lidar_gnss_z_snow_RMSE=RMSE(gnss_z_snow,lidar_dsm_z_snow),#RMSE of survey vs lidar snow surface elevation 
+    # lidar_gnss_z_snow_Bias=bias(gnss_z_snow,lidar_dsm_z_snow), #Bias of survey vs lidar snow surface elevation 
+    # lidar_gnss_z_snow_r2=r2fun(gnss_z_snow,lidar_dsm_z_snow), #Bias of survey vs lidar snow surface elevation 
+  ) |> distinct()
+
+errors
+
+write.csv(errors, paste0('data/error_summary/error_table_pre_post_', post_snow_id, '_', prj_name, '.csv'))
+
+error_tbl_files <- list.files('data/error_summary/', pattern = 'error_table*', full.names = T)
+all_err_tbls <- purrr::map_dfr(error_tbl_files, read.csv)
+write.csv(all_err_tbls, 'data/error_summary/all_error_tbls.csv', row.names = F)
+
+mean_bias <- errors$lidar_insitu_Hs_Bias |> round(2)
+r2 <- errors$lidar_insitu_Hs_r2 |> round(2)
+rmse <- errors$lidar_insitu_Hs_RMSE |> round(2)
+
+label_vect <- c(
+  paste0("italic(R) ^ 2  ==", r2),
+  paste0("Mean~Bias~(m)  ==", mean_bias),
+  paste0("RMSE~(m)  ==", rmse))
+
+# plot raw lidar vs in-situ (looks like its bias corrected due to strip align)
 ggplot2::ggplot(survey |> filter(Hs_lidar_resamp > 0), ggplot2::aes(Hs_insitu, Hs_lidar_resamp)) + 
   ggplot2::geom_point(aes(colour = canopy)) +
   ggplot2::geom_abline()  +
-  ggpubr::stat_cor(aes(
-    label = paste(
-      ..rr.label..,
-      if_else(
-        readr::parse_number(..p.label..) < 0.001,
-        "p<0.001",
-        ..p.label..
-      ),
-      sep = "~`, `~"
-    )),
-    geom = "label",
-    show.legend = F) +
+  annotate("text", x = rep(0.1, 3), y = c(0.5, 0.45, 0.4)-0.1, label = label_vect, parse = TRUE) +
+  # ggpubr::stat_cor(aes(
+  #   label = paste(
+  #     ..rr.label..,
+  #     if_else(
+  #       readr::parse_number(..p.label..) < 0.001,
+  #       "p<0.001",
+  #       ..p.label..
+  #     ),
+  #     sep = "~`, `~"
+  #   )),
+  #   geom = "label",
+  #   show.legend = F) +
+  annotate("text", x = rep(0.1, 3), y = c(0.5, 0.45, 0.4)-0.1, label = label_vect, parse = TRUE) +
   ylim(c(0, NA)) +
   xlim(c(0, NA)) +
-  ylab('Bias Corrected Resampled Lidar 𝚫 Snow Depth (m)') +
+  ylab('Lidar 𝚫 Snow Depth (m)') +
   xlab('In-situ 𝚫 Snow Depth (m)')
 #plotly::ggplotly()
 
@@ -203,46 +251,7 @@ ggplot2::ggsave(
   height = 4, device = png
 )
 
-# normalised is slightly worse statistically but has more data under the canopy
-# so going to use this from now on, compare the tifs in qgis to see
-
-#error summary
-survey_select<-survey |> 
-  dplyr::filter(Identifier == post_snow_id) |> 
-  mutate(prj_name = prj_name) |> 
-  select(Identifier, prj_name, everything())
-write.csv(survey_select, paste0('data/lidar_w_survey_hs/survey_data_pre_post_', post_snow_id, '_', prj_name, '.csv'))
-
-errors <- survey_select |> 
-  group_by(Identifier) |> 
-  dplyr::summarise(
-  prj_name = prj_name,
-  lidar_insitu_Hs_RMSE=RMSE(Hs_insitu,Hs_lidar_resamp), #RMSE of survey vs lidar snow depth
-  lidar_insitu_Hs_Bias=bias(Hs_insitu,Hs_lidar_resamp), #Bias of survey vs lidar snow depth
-  lidar_insitu_Hs_r2=r2fun(Hs_insitu,Hs_lidar_resamp), #R2 of survey vs lidar snow depth
-  # lidar_gnss_z_snow_RMSE=RMSE(gnss_z_snow,lidar_dsm_z_snow),#RMSE of survey vs lidar snow surface elevation 
-  # lidar_gnss_z_snow_Bias=bias(gnss_z_snow,lidar_dsm_z_snow), #Bias of survey vs lidar snow surface elevation 
-  # lidar_gnss_z_snow_r2=r2fun(gnss_z_snow,lidar_dsm_z_snow), #Bias of survey vs lidar snow surface elevation 
-) |> distinct()
-
-errors
-
-write.csv(errors, paste0('data/error_summary/error_table_pre_post_', post_snow_id, '_', prj_name, '.csv'))
-
-error_tbl_files <- list.files('data/error_summary/', pattern = 'error_table*', full.names = T)
-all_err_tbls <- purrr::map_dfr(error_tbl_files, read.csv)
-write.csv(all_err_tbls, 'data/error_summary/all_error_tbls.csv', row.names = F)
-
-# plot bias corrected lidar 
-mean_bias <- errors$lidar_insitu_Hs_Bias |> round(2)
-r2 <- errors$lidar_insitu_Hs_r2 |> round(2)
-rmse <- errors$lidar_insitu_Hs_RMSE |> round(2)
-
-label_vect <- c(
-  paste0("italic(R) ^ 2  ==", r2),
-  paste0("Mean~Bias~(m)  ==", mean_bias),
-  paste0("RMSE~(m)  ==", rmse))
-
+# bias corrected lidar (stats are still for non bias corrected)
 ggplot2::ggplot(survey |> filter(Hs_lidar_resamp > 0), ggplot2::aes(Hs_insitu, Hs_lidar_resamp - mean_bias)) + 
   ggplot2::geom_point(aes(colour = canopy)) +
   ggplot2::geom_abline()  +

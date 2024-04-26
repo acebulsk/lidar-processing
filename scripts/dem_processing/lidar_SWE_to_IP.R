@@ -67,6 +67,24 @@ ip_rast <- ifel(ip_rast < 0, 0, ip_rast)
 
 names(ip_rast) <- 'I/P'
 
+ip_rast_df <- values(ip_rast) |> as.data.frame()
+del_tf_rast_df <- values(del_tf_rast) |> as.data.frame()
+ggplot(del_tf_rast_df, aes(x = swe_kg_m2)) + 
+  geom_histogram(colour = 'black', fill = 'darkgray', binwidth = 1) +
+  xlab('Throughfall (mm)')
+
+ggsave(paste0(
+  'figs/lidar_snow_depth_analysis/pre_post_figs/',
+  pre_post_ids[1],
+  '_',
+  pre_post_ids[2],
+  '_',
+  'histogram_throughfall.png'
+), width = 4, height = 3)
+
+ggplot(ip_rast_df, aes(x = `I/P`)) + 
+  geom_histogram(colour = 'black', fill = 'darkgray', binwidth = 0.025)
+
 terra::writeRaster(
   ip_rast,
   paste0(
@@ -175,3 +193,39 @@ for(plot in 1:nrow(fsr_plots)){
   )
   
 }
+
+# plot just PWL SW
+
+pwl_e <- fsr_plots |> filter(name == 'PWL_E')
+
+# Save the plot for lidr_sd
+png(paste0(
+  'figs/maps/pwl_e_',
+  pre_post_ids[1],
+  '_',
+  pre_post_ids[2],
+  '_',
+  prj_name,
+  'ip_normalised_resample_crop_',
+  dsm_res_custm,
+  '.png'
+), width = 1000, height = 800, res = 200)
+plot(terra::crop(ip_rast, pwl_e, mask = T), main = 'PWL E: I/P (-)', col = viridis(100))
+dev.off()
+
+fsr_s <- fsr_plots |> filter(name == 'FSR_S')
+
+# Save the plot for lidr_sd
+png(paste0(
+  'figs/maps/fsr_s_',
+  pre_post_ids[1],
+  '_',
+  pre_post_ids[2],
+  '_',
+  prj_name,
+  'ip_normalised_resample_crop_',
+  dsm_res_custm,
+  '.png'
+), width = 1000, height = 800, res = 200)
+plot(terra::crop(ip_rast, fsr_s, mask = T), main = 'FSR S: I/P (-)', col = viridis(100))
+dev.off()

@@ -6,6 +6,7 @@ library(terra)
 library(sf)
 library(ggplot2)
 library(ggpubr)
+library(viridis)
 
 # input data paths ----
 
@@ -21,7 +22,8 @@ las_proc_out_path <- '/media/alex/phd-data/local-usask/analysis/lidar-processing
 
 # Variables ----
 
-prj_name <- 'params_v1.0.0'
+# prj_name <- 'params_rm_streaks_nefb0_75_s0_1_nsd'
+prj_name <- 'params_v1.0.0_strip_align_gcp_outlier'
 
 # pre_post_ids <- c('22_045', '22_047')
 # pre_post_ids <- c('22_066', '22_068')
@@ -69,3 +71,4 @@ LongLatToUTM<-function(x,y,zone){
   res <- spTransform(xy, CRS(paste("+proj=utm +zone=",zone," ellps=WGS84",sep='')))
   return(as.data.frame(res))
 }
+
