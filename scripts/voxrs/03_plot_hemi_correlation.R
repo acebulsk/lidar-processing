@@ -64,9 +64,9 @@ p_tile <-
         # axis.text.y = element_text(colour = "black")
         )
 
-p_tile
+# p_tile
 
-ggsave(paste0('figs/voxrs_ip_regressions/full_hemi_rho_s_cor_mcn_ip_',
+ggsave(paste0('figs/voxrs/hemis/cor_cn_ip/full_hemi_rho_s_cor_mcn_ip_',
               vox_config_id,
               vox_runtag,
               '.png'),
@@ -110,9 +110,9 @@ p_tile <-
         # axis.text.y = element_text(colour = "black")
   )
 
-p_tile
+# p_tile
 
-ggsave(paste0('figs/voxrs_ip_regressions/full_hemi_rho_p_cor_mcn_ip_',
+ggsave(paste0('figs/voxrs/hemis/cor_cn_ip/full_hemi_rho_p_cor_mcn_ip_',
               vox_config_id,
               vox_runtag,
               '.png'),

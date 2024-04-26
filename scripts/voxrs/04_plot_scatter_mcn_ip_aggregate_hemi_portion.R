@@ -192,6 +192,6 @@ mcn_df_smry |>
   ylab('Interception Efficiency (-)') +
   xlab('Mean Contact Number')
 
-ggsave(paste0('figs/voxrs_ip_regressions/',
+ggsave(paste0('figs/voxrs/scatter/',
               plot, "_", 'mean_contact_number_vs_ip_phi_',
               phi_from, '_', phi_to, '_theta_', theta_from, '_', theta_to, '.png'), width = 6, height = 5, device = png)

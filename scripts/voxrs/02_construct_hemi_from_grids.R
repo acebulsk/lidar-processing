@@ -3,13 +3,12 @@
 # regressions), the correlation is between between a raster of IP and a raster
 # of Contact Numbers (inside the h5 files)
 
-# INPUT: h5 files that contain voxrs step 2 outputs 
+# INPUT: h5 files that contain voxrs step 2 outputs (expected returns along a ray) 
+# contact_number = expected_returns_mean * cn_coef
 # OUTPUT: list of correlations (rho_s, rho_p) for each phi / theta pair (360*91)
 
 # h5path <- '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/voxrs/outputs/grid_resampling/grid_resampled_23_072_vox_len_0.25m__gridgen_FSR_NE_t0_14.h5'
 # h5readAttributes(file = h5path, name = 'p1_t10')
-# TODO NEED TO UPDATE FROM PLOTTING ESTIMATED RETURNS TO CONTACT NUMBER USING:
-# contact_number = returns_mean * cn_coef,
 # cn_coef <- 0.38 # from VoxRS default, also see supplementary material for Staines & Pomeroy 2023
 
 phi_from <- 0
@@ -39,7 +38,7 @@ ip_rast <- rast(
 
 # mean(values(ip_rast), na.rm = T)
 
-ip_pts <- terra::as.points(ip_rast, na.rm = T) |> # removing the left join didnt save much time
+ip_pts <- terra::as.points(ip_rast, na.rm = T) |>
   as.data.frame(geom="XY")
 
 ip_pts_vect <- ip_pts$`I/P`
@@ -56,7 +55,7 @@ phi_theta_list <- asplit(phi_theta_df, 1)
 
 # cor_list_out <- lapply(phi_theta_list, regress_mcn_ip, ip_df = ip_pts)
 cor_list_out <-
-  pbapply::pblapply(phi_theta_list, regress_mcn_ip, ip_df = ip_pts, cl = n_cores)
+  pbapply::pblapply(phi_theta_list, regress_mcn_ip, ip_df = ip_pts_vect, cl = n_cores)
 
 saveRDS(cor_list_out, 
         paste0('data/hemi_stats/full_hemi_correlation_grid_resampled_',
