@@ -11,10 +11,10 @@
 
 phi_from <- 0
 phi_to <- 90
-phi_by <- 2
+phi_by <- 3
 theta_from <- 0
 theta_to <- 359
-theta_by <- 5
+theta_by <- 10
 
 phi_theta_list <-
   build_phi_theta_pairs(phi_from, phi_to, phi_by, 
@@ -47,10 +47,12 @@ rm(mcn_df_smry)
 saveRDS(mcn_df_out,
         paste0(
           'data/hemi_stats/aggregate_hemi_stats_across_traj_angle_',
+          vox_id,
+          '_phiby_',
           phi_by,
           '_thetaby_',
           theta_by,
-          '.png'
+          '.rds'
         ))
         
 gc() # free unused memory

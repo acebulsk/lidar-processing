@@ -82,7 +82,7 @@ norm_rast_sd_tiles <-
   list.files(
     paste0(las_proc_out_path,
            post_snow_id,
-           "_gcp_outlier/dsm_hs_normalised/", prj_name),
+           "/dsm_hs_normalised/", prj_name),
     pattern = '\\.bil$',
     full.names = T
   ) |> 
@@ -206,9 +206,9 @@ error_tbl_files <- list.files('data/error_summary/', pattern = 'error_table*', f
 all_err_tbls <- purrr::map_dfr(error_tbl_files, read.csv)
 write.csv(all_err_tbls, 'data/error_summary/all_error_tbls.csv', row.names = F)
 
-mean_bias <- errors$lidar_insitu_Hs_Bias |> round(2)
-r2 <- errors$lidar_insitu_Hs_r2 |> round(2)
-rmse <- errors$lidar_insitu_Hs_RMSE |> round(2)
+mean_bias <- errors$lidar_insitu_Hs_Bias |> round(3)
+r2 <- errors$lidar_insitu_Hs_r2 |> round(3)
+rmse <- errors$lidar_insitu_Hs_RMSE |> round(3)
 
 label_vect <- c(
   paste0("italic(R) ^ 2  ==", r2),
@@ -217,7 +217,7 @@ label_vect <- c(
 
 # plot raw lidar vs in-situ (looks like its bias corrected due to strip align)
 ggplot2::ggplot(survey |> filter(Hs_lidar_resamp > 0), ggplot2::aes(Hs_insitu, Hs_lidar_resamp)) + 
-  ggplot2::geom_point(aes(colour = canopy)) +
+  ggplot2::geom_point() +
   ggplot2::geom_abline()  +
   annotate("text", x = rep(0.1, 3), y = c(0.5, 0.45, 0.4)-0.1, label = label_vect, parse = TRUE) +
   # ggpubr::stat_cor(aes(
@@ -247,13 +247,13 @@ ggplot2::ggsave(
     prj_name,
     '_snow_depth_Hs_insitu_vs_Hs_lidar_resamp.png'
   ),
-  width = 6,
+  width = 4,
   height = 4, device = png
 )
 
 # bias corrected lidar (stats are still for non bias corrected)
 ggplot2::ggplot(survey |> filter(Hs_lidar_resamp > 0), ggplot2::aes(Hs_insitu, Hs_lidar_resamp - mean_bias)) + 
-  ggplot2::geom_point(aes(colour = canopy)) +
+  ggplot2::geom_point() +
   ggplot2::geom_abline()  +
   annotate("text", x = rep(0.1, 3), y = c(0.5, 0.45, 0.4)-0.1, label = label_vect, parse = TRUE) +
   # ggpubr::stat_cor(aes(
@@ -281,7 +281,7 @@ ggplot2::ggsave(
     prj_name,
     '_snow_depth_Hs_insitu_vs_Hs_lidar_resamp_bias_corrected.png'
   ),
-  width = 6,
+  width = 4,
   height = 4, device = png
 )
 

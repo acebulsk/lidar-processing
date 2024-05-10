@@ -7,40 +7,51 @@ library(rhdf5)
 library(tidyverse)
 library(modelr)
 
-n_cores <- 6
+n_cores <- 4
 
 source('scripts/voxrs/voxrs_helper_fns.R')
 
-plot_names <- c('FSR_NW', 'FSR_NE', 'FSR_S', 'PWL_E', 'PWL_N', 'PWL_SW')
+plot_names <-
+  c(#'FSR_NW',
+    #'FSR_NE',
+    'FSR_S',
+    'PWL_E')
+   # 'PWL_N',
+    #'PWL_SW')
+
+# plot <- 'PWL_E'
 
 # event_ids <- c('23_026', '23_027')
 event_ids <- c('23_072', '23_073')
 
+# WARNING: Need to match the voxrs output with the same las_prj_name used as the grid elevation surface (needs the same number of cells)
 voxrs_outputs <- '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/'
-las_prj_name <- 'params_v1.0.0'
+las_prj_name <- 'v2.0.0_sa'
 vox_id <- event_ids[1] # which day do we want canopy metrics for?
-vox_config_id <- paste0(vox_id, '_vox_len_0.25m_')
+# vox_config_id <- paste0(vox_id, '_vox_len_0.25m_')
+# barely noticble change after changing to strip align and corresponding new snow depth liadar measurements
+vox_config_id <- paste0(vox_id, '_vox_len_0.25m_sa_gridgen_v2.0.0_sa')
 
-# mcn_df_out <- data.frame()
-# 
-# for (plot in plot_names) {
-#   
-#   vox_runtag <- paste0('_gridgen_', plot)
-#   
-#   h5_basename <- paste0(voxrs_outputs,
-#                         vox_id,
-#                         '/voxrs/outputs/grid_resampling/',
-#                         'grid_resampled',
-#                         '_',
-#                         vox_config_id,
-#                         vox_runtag)
-#   
-#   # source('scripts/voxrs/02_construct_hemi_from_grids.R')
-#   # source('scripts/voxrs/03_plot_hemi_correlation.R')
-#   # source('scripts/voxrs/04_plot_scatter_mcn_ip_aggregate_hemi_portion.R')
-#   source('scripts/voxrs/05_plot_scatter_traj_angle_mcn_aggregate_hemi_portion.R')
-#   
-# }
+
+mcn_df_out <- data.frame()
+
+for (plot in plot_names) {
+
+  h5_basename <- paste0(voxrs_outputs,
+                        vox_id,
+                        '/voxrs/outputs/grid_resampling/',
+                        'grid_resampled',
+                        '_',
+                        vox_config_id,
+                        "_",
+                        plot)
+
+  # source('scripts/voxrs/02_construct_hemi_from_grids.R')
+  # source('scripts/voxrs/03_plot_hemi_correlation.R')
+  # source('scripts/voxrs/04_plot_scatter_mcn_ip_aggregate_hemi_portion.R')
+  source('scripts/voxrs/05_plot_scatter_traj_angle_mcn_aggregate_hemi_portion.R')
+
+}
 
 
 traj_angle_deg <- function(wind_speed, velocity){
@@ -54,24 +65,57 @@ example_traj <- data.frame(
   wind_speed = seq(0,10,0.001),
   traj_angle = traj_angle_deg(seq(0,10,0.001),1) |> round(1))
 
-phi_by <- 2
-theta_by <- 5
+plot_fs1 <- readRDS(paste0('data/grid_stats/plot_avg_forest_metricts_nadir_', event_ids[1], '.rds'))  |> 
+  mutate(cc_nadir_round = round(cc_nadir, 2),
+         event = event_ids[1])
+plot_fs2 <- readRDS(paste0('data/grid_stats/plot_avg_forest_metricts_nadir_', event_ids[2], '.rds'))  |> 
+  mutate(cc_nadir_round = round(cc_nadir, 2),
+         event = event_ids[2]) 
+plot_fs <- rbind(plot_fs1, plot_fs2)
 
-plot_fs <- readRDS('data/grid_stats/plot_avg_forest_metricts_nadir.rds')  |> 
-  mutate(cc_nadir = round(cc_nadir, 2)) 
-
-mcn_df_out <- readRDS(paste0(
+mcn_df_out1 <- readRDS(paste0(
   'data/hemi_stats/aggregate_hemi_stats_across_traj_angle_',
+  event_ids[1],
+  '_phiby_',
   phi_by,
   '_thetaby_',
   theta_by,
-  '.png'
-)) |> 
+  '.rds'
+)) |> mutate(event = event_ids[1])
+mcn_df_out2 <- readRDS(paste0(
+  'data/hemi_stats/aggregate_hemi_stats_across_traj_angle_',
+  event_ids[2],
+  '_phiby_',
+  phi_by,
+  '_thetaby_',
+  theta_by,
+  '.rds'
+)) |> mutate(event = event_ids[2])
+
+mcn_df_out <- rbind(mcn_df_out1, mcn_df_out2) |> 
   mutate(traj_angle = phi_d - 90) |> 
-  left_join(plot_fs, by = 'plot_name') |> 
-  filter(plot_name != 'FSR_NE')  |>
+  left_join(plot_fs, by = c('plot_name', 'event')) |> 
   left_join(example_traj, by = 'traj_angle',
-            multiple = 'first')
+            multiple = 'first') |> 
+  mutate(cc = 1-tau,
+         cc_perc_increase = cc-cc_nadir,
+         cc_multiplier = cc/cc_nadir,
+         cc_test = cc_multiplier*cc_nadir,
+         plot_name = ifelse(plot_name == 'FSR_S', "FT", "PWL")) 
+
+mcn_nadir_smry <- mcn_df_out |> 
+  filter(phi_d == 0) |> 
+  group_by(plot_name, event) |> 
+  summarise(across(c(cc, tau), mean)) |> 
+  mutate(cc = 1-tau) |> 
+  rename(tau_nadir = tau,
+         cc_nadir = cc)
+
+# grab some select stats for the manuscript
+mcn_df_select_stats <- mcn_df_out |> 
+  filter(wind_speed == 0 | (wind_speed > 1.45 & wind_speed < 1.51) | (wind_speed > 1.99 & wind_speed < 2.1))
+
+saveRDS(mcn_df_select_stats, 'data/hemi_stats/aggregate_hemi_stats_select_cc_wind_for_manuscript.rds')
 
 model_lm <- lm(log(mcn) ~ phi_d, data = mcn_df_out) # -1 forces through the origin
 
@@ -90,22 +134,44 @@ mcn_df_out |>
     name,
     levels = c('Trajectory Angle (°)', 'Mid Canopy Wind Speed (m/s)')
   )) |>
-  ggplot(aes(value, mcn)) +
-  geom_point(aes(colour = as.factor(cc_nadir))) + 
+  ggplot(aes(value, cc_perc_increase)) +
+  geom_point(aes(colour = plot_name, shape = event)) + 
   # geom_line(aes(y = mod_mcn_lm, linetype = 'lm')) +
   # geom_line(aes(y = mod_mcn_nls, linetype = 'nls')) +
-  ylab('Mean Contact Number (-)') +
+  ylab('Increase in Canopy Coverage (-)') +
   xlab(element_blank()) +
   scale_color_viridis_d(option = 'F',
                         direction = -1,
                         end = .7, name = 'Nadir Canopy\nCoverage (-)') +
   facet_grid(cols = vars(name), scales = 'free_x')
 
+ggsave(paste0('figs/voxrs/scatter/traj_angle_and_wind_vs_inc_canopy_cover_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
+       width = 6.5, height = 3)
+
+mcn_df_out |> 
+  rename(`Trajectory Angle (°)` = traj_angle,
+         `Mid Canopy Wind Speed (m/s)` = wind_speed) |> 
+  pivot_longer(c(`Trajectory Angle (°)`,
+                 `Mid Canopy Wind Speed (m/s)`)) |> 
+  mutate(name = factor(
+    name,
+    levels = c('Trajectory Angle (°)', 'Mid Canopy Wind Speed (m/s)')
+  )) |>
+  ggplot(aes(value, mcn)) +
+  geom_point(aes(colour = plot_name, shape = event)) + 
+  # geom_line(aes(y = mod_mcn_lm, linetype = 'lm')) +
+  # geom_line(aes(y = mod_mcn_nls, linetype = 'nls')) +
+  ylab('Mean Contact Number (-)') +
+  xlab(element_blank()) +
+  scale_color_viridis_d(option = 'F',
+                        direction = -1,
+                        end = .7, name = 'Plot Name') +
+  facet_grid(cols = vars(name), scales = 'free_x')
+
 ggsave(paste0('figs/voxrs/scatter/traj_angle_and_wind_vs_contact_number_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
        width = 6.5, height = 3)
 
 mcn_df_out |> 
-  mutate(cc = 1-tau) |> 
   rename(`Trajectory Angle (°)` = traj_angle,
          `Mid Canopy Wind Speed (m/s)` = wind_speed) |> 
   pivot_longer(c(`Trajectory Angle (°)`,
@@ -115,14 +181,14 @@ mcn_df_out |>
     levels = c('Trajectory Angle (°)', 'Mid Canopy Wind Speed (m/s)')
   )) |>
   ggplot(aes(value, cc)) +
-  geom_point(aes(colour = as.factor(cc_nadir))) + 
+  geom_point(aes(colour = plot_name, shape = event)) + 
   # geom_line(aes(y = mod_mcn_lm, linetype = 'lm')) +
   # geom_line(aes(y = mod_mcn_nls, linetype = 'nls')) +
   ylab('Apparent Canopy Coverage (-)') +
-  xlab(element_blank()) +
+  xlab(element_blank())+
   scale_color_viridis_d(option = 'F',
                         direction = -1,
-                        end = .7, name = 'Nadir Canopy\nCoverage (-)') +
+                        end = .7, name = 'Plot Name') +
   facet_grid(cols = vars(name), scales = 'free_x')
 
 ggsave(paste0('figs/voxrs/scatter/traj_angle_and_wind_vs_canopy_coverage_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
@@ -131,12 +197,15 @@ ggsave(paste0('figs/voxrs/scatter/traj_angle_and_wind_vs_canopy_coverage_phiby_'
 
 mcn_df_out |> 
   filter(phi_d > 0) |> 
-  ggplot(aes(phi_d - 90, tau)) +
-  geom_point(aes(colour = plot_name)) + 
+  ggplot(aes(phi_d, tau)) +
+  geom_line(aes(colour = plot_name, linetype = event)) + 
   # geom_line(aes(y = mod_mcn_lm, linetype = 'lm')) +
   # geom_line(aes(y = mod_mcn_nls, linetype = 'nls')) +
   ylab('Radiation Transmittance (-)') +
-  xlab('Hydrometeor Trajectory (deg. °)') 
+  xlab('Hydrometeor Trajectory (deg. °)') +
+  scale_color_viridis_d(option = 'F',
+                        direction = -1,
+                        end = .7, name = 'Plot Name') 
 
 ggsave(paste0('figs/voxrs/scatter/traj_angle_vs_transmittance_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
        width = 6, height = 5)

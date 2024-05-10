@@ -48,3 +48,4 @@ vignettes/*.pdf
 data/
 *.html
 *.qgz
+figs/

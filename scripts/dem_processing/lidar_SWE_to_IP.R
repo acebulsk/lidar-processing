@@ -14,7 +14,7 @@ del_tf_rast <- rast(
     'swe_normalised_resample_0.25.tif'
   ))
 
-# get traj files for start/end times for lidar flights which will define the event diuration
+# get traj files for start/end times for lidar flights which will define the event duration
 traj_pre <- read.csv(paste0(
   '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/metadata/drone_trajectory/',
   pre_post_ids[1],
@@ -71,7 +71,7 @@ ip_rast_df <- values(ip_rast) |> as.data.frame()
 del_tf_rast_df <- values(del_tf_rast) |> as.data.frame()
 ggplot(del_tf_rast_df, aes(x = swe_kg_m2)) + 
   geom_histogram(colour = 'black', fill = 'darkgray', binwidth = 1) +
-  xlab('Throughfall (mm)')
+  xlab('𝚫 SWE (kg m⁻²)')
 
 ggsave(paste0(
   'figs/lidar_snow_depth_analysis/pre_post_figs/',
@@ -130,7 +130,7 @@ png(paste0(
   dsm_res_custm,
   '.png'
 ), width = 1000, height = 800, res = 200)
-plot(terra::crop(ip_rast, pwl_e, mask = T), main = 'PWL E: I/P (-)', col = viridis(100))
+plot(terra::crop(ip_rast, pwl_e, mask = T), main = 'PWL: I/P (-)', col = viridis(100))
 dev.off()
 
 fsr_s <- fsr_plots |> filter(name == 'FSR_S')
@@ -147,7 +147,7 @@ png(paste0(
   dsm_res_custm,
   '.png'
 ), width = 1000, height = 800, res = 200)
-plot(terra::crop(ip_rast, fsr_s, mask = T), main = 'FSR S: I/P (-)', col = viridis(100))
+plot(terra::crop(ip_rast, fsr_s, mask = T), main = 'FT: I/P (-)', col = viridis(100))
 dev.off()
 
 # crop to study zone
@@ -210,7 +210,7 @@ png(paste0(
   dsm_res_custm,
   '.png'
 ), width = 1000, height = 800, res = 200)
-plot(terra::crop(ip_rast, pwl_e, mask = T), main = 'PWL E: I/P (-)', col = viridis(100))
+plot(terra::crop(ip_rast, pwl_e, mask = T), main = 'PWL: I/P (-)', col = viridis(100))
 dev.off()
 
 fsr_s <- fsr_plots |> filter(name == 'FSR_S')
@@ -227,5 +227,5 @@ png(paste0(
   dsm_res_custm,
   '.png'
 ), width = 1000, height = 800, res = 200)
-plot(terra::crop(ip_rast, fsr_s, mask = T), main = 'FSR S: I/P (-)', col = viridis(100))
+plot(terra::crop(ip_rast, fsr_s, mask = T), main = 'FT: I/P (-)', col = viridis(100))
 dev.off()

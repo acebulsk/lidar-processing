@@ -2,7 +2,8 @@
 
 hemi_list <- readRDS(paste0('data/hemi_stats/full_hemi_correlation_grid_resampled_',
                             vox_config_id,
-                            vox_runtag,
+                            "_",
+                            plot,
                             '.rds'))
 
 hemi_df <- do.call(rbind, hemi_list)
@@ -13,16 +14,28 @@ colnames(hemi_df) <- c('phi_d',
                        'rp',
                        'rs')
 
-hemi_df |> 
-  filter(rs > .5,
-         phi_d > 20) |> 
+upper2_5 <- hemi_df$rs |> quantile(0.975)
+
+hemi_high_cor <-  hemi_df |> 
+  filter(rs > upper2_5)
+
+plot_theta_high_cor <- hemi_high_cor |> 
   pull(theta_d) |> 
   mean()
 
-hemi_df |> 
-  filter(rs > .5,) |> 
+plot_phi_high_cor <- hemi_high_cor |> 
   pull(phi_d) |> 
   mean()
+
+plot_high_cor <- data.frame(phi = plot_phi_high_cor, theta = plot_theta_high_cor)
+
+saveRDS(plot_high_cor,
+        paste0('data/hemi_stats/hemi_avg_theta_phi_for_rho_s_upper_2_5th_percentile_',
+                            vox_config_id,
+                            "_",
+                            plot,
+                            '.rds')
+               )
 
 # hemi_df$id <- row.names(hemi_df) |> as.numeric()
 
@@ -68,7 +81,8 @@ p_tile <-
 
 ggsave(paste0('figs/voxrs/hemis/cor_cn_ip/full_hemi_rho_s_cor_mcn_ip_',
               vox_config_id,
-              vox_runtag,
+              "_",
+              plot,
               '.png'),
        width = 4, height = 3, device = png)
 
@@ -114,7 +128,8 @@ p_tile <-
 
 ggsave(paste0('figs/voxrs/hemis/cor_cn_ip/full_hemi_rho_p_cor_mcn_ip_',
               vox_config_id,
-              vox_runtag,
+               "_",
+               plot,
               '.png'),
        width = 4, height = 3, device = png)
 

@@ -23,7 +23,7 @@ las_proc_out_path <- '/media/alex/phd-data/local-usask/analysis/lidar-processing
 # Variables ----
 
 # prj_name <- 'params_rm_streaks_nefb0_75_s0_1_nsd'
-prj_name <- 'params_v1.0.0_strip_align_gcp_outlier'
+prj_name <- 'v2.0.0_sa'
 
 # pre_post_ids <- c('22_045', '22_047')
 # pre_post_ids <- c('22_066', '22_068')
@@ -37,8 +37,15 @@ dsm_res_custm <- 0.25 # to coarsen the lastools output dsm
 # Masks ----
 
 #subset clip area
+plot_name_dict <- data.frame(
+  name = c('PWL_E', 'FSR_S'),
+  plot_name = c('PWL Plot', 'FT Plot')
+)
 # subset_clip <- read_sf('data/gis/shp/fsr_traj_extent_buff_20m.shp') # this is whats used in lastools and not needed again here
-fsr_plots <- read_sf('data/gis/shp/fsr_forest_plots_v_1_0.shp') # six select forest plots
+fsr_plots <- read_sf('data/gis/shp/fsr_forest_plots_v_1_0.shp')# |>  
+ # filter(name %in%  c('PWL_E', 'FSR_S'))  |>
+ # left_join(plot_name_dict)
+
 # fsr_plots <- read_sf('data/gis/shp/fsr_lidar_plots_v_2_0.shp') # updated to extend north
 # fsr_plots <- read_sf('data/gis/shp/fsr_lidar_plots.shp') # original small ones
 fsr_masks <- read_sf('data/gis/shp/fsr_snow_depth_mask_road_objects_etc.shp')

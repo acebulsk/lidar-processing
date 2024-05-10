@@ -60,7 +60,8 @@ cor_list_out <-
 saveRDS(cor_list_out, 
         paste0('data/hemi_stats/full_hemi_correlation_grid_resampled_',
                vox_config_id,
-               vox_runtag,
+               "_",
+               plot,
                '.rds'
                ))
 

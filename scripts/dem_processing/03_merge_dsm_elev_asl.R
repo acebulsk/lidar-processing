@@ -12,7 +12,7 @@ surv_id <- '23_072'
 dsm_type <- "dsm_interpolated"
 
 # load data ----
-
+fsr_plots <- read_sf('data/gis/shp/fsr_forest_plots_v_1_0.shp')
 swe_tif <- rast(paste0(
   'data/dsm_swe/',
   pre_post_ids[1],
@@ -81,6 +81,25 @@ terra::writeRaster(
     "_dsm_elevation_resamp.tif"
   ), overwrite = T
 )
+
+for(plot in 1:nrow(fsr_plots)){
+  plot_mask_sf <- fsr_plots[plot, ]
+  norm_rast_resamp_plot <- terra::crop(norm_rast_resamp + dem_vert_ofst, plot_mask_sf, mask = T)
+  
+  terra::writeRaster(
+    norm_rast_resamp_plot,
+    paste0(
+      'data/', dsm_type, '_elevation/',
+      surv_id,
+      '_',
+      prj_name,
+      '_',
+      plot_mask_sf$name,
+      "_dsm_elevation_resamp_crop_plot_only_ofst_abv_grnd_", dem_vert_ofst, "m.tif"
+    ),  overwrite = T
+  )
+  
+}
 
 dsmmerged_crop <- terra::crop(norm_rast_resamp, fsr_plots, mask = T)
 

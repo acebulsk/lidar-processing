@@ -11,7 +11,7 @@ format:
 library(tidyverse)
 
 # avg error for each survey day 
-df_avg_surv_err <- read.csv('prepost_data/error_summary/pre_post_error_summary.csv') 
+df_avg_surv_err <- read.csv('data/error_summary/pre_post_error_summary.csv') 
 
 drone_post_ids <- df_avg_surv_err$Identifier
 
@@ -43,10 +43,11 @@ The drone flights used for this analysis with corresponding snow surveys are:
 ```{r}
 surv_meta
 ```
+
 ```{r}
 # bring in error summary for each snow survey point 
 
-fls <- list.files('prepost_data/lidar_w_survey_hs/', 
+fls <- list.files('data/lidar_w_survey_hs/', 
                   pattern = 'survey_data*', full.names = T)
 
 # combine the error summary sheets fom the lidar_processing script
@@ -121,7 +122,7 @@ df_gnss_lidar_surface_ele |>
   ggplot(aes(gnss_z_snow, lidar_dsm_z_snow, colour = canopy)) +
   geom_point() +
   geom_abline() +
-  facet_wrap(~jday_from + Identifier + to, scales = 'free') +
+  facet_wrap(~jday_from + Identifier + prj_name + to, scales = 'free') +
   xlab('GNSS Surface Elevation (m)') +
   ylab('Lidar Surface Elevation (m)')
 ```
@@ -132,6 +133,6 @@ Boxplot:
 df_gnss_lidar_surface_ele |> 
   ggplot(aes(bias*100, x = canopy)) +
   geom_boxplot() +
-  facet_grid(~jday_from + Identifier + to) +
+  facet_grid(~jday_from + Identifier + prj_name + to) +
   ylab('Surface Elevation Bias (cm, Lidar - GNSS)')
 ```

@@ -5,6 +5,7 @@
 
 # INPUT: h5 files that contain voxrs step 2 outputs 
 # OUTPUT: list of correlations (rho_s, rho_p) for each phi / theta pair (360*91)
+# PURPOSE: show that the relationship between MCN and IP is non-linear to justify use of spearmans corr in the hemi plots.
 
 library(terra)
 library(sf)
@@ -14,27 +15,30 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-# h5path <- '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/voxrs/outputs/grid_resampling/grid_resampled_23_072_vox_len_0.25m__gridgen_FSR_NE_t0_14.h5'
-# h5readAttributes(file = h5path, name = 'p1_t10')
+hemi_list <- readRDS(paste0('data/hemi_stats/full_hemi_correlation_grid_resampled_',
+                            vox_config_id,
+                            "_",
+                            plot,
+                            '.rds'))
 
-phi_from <- 13
-phi_to <- 16
+hemi_df <- do.call(rbind, hemi_list)
+hemi_df <- data.frame(apply(hemi_df, 2, as.numeric))
+
+colnames(hemi_df) <- c('phi_d',
+                       'theta_d',
+                       'rp',
+                       'rs')
+
+upper2_5 <- hemi_df$rs |> quantile(0.975)
+hemi_high_cor <-  hemi_df |> 
+  filter(rs > upper2_5)
+
+phi_from <- 0
+phi_to <- max(hemi_high_cor$phi_d) |> round()
 phi_by <- 1
-theta_from <- 186
-theta_to <- 190
+theta_from <- min(hemi_high_cor$theta_d) |> round()
+theta_to <- max(hemi_high_cor$theta_d) |> round()
 theta_by <- 1
-
-vox_runtag <- paste0('_gridgen_', plot)
-las_prj_name <- 'params_v1.0.0'
-
-voxrs_outputs <- '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/'
-h5_basename <- paste0(voxrs_outputs,
-                      vox_id,
-                      '/voxrs/outputs/grid_resampling/',
-                      'grid_resampled',
-                      '_',
-                      vox_config_id,
-                      vox_runtag)
 
 # data inputs ----
 
@@ -73,6 +77,7 @@ mcn_df <- do.call(rbind, mcn_list)
 mcn_df_smry <- mcn_df |> 
   group_by(x, y) |> 
   summarise(
+    tau = mean(tau),
     mcn = mean(mcn)
   ) |> 
   left_join(ip_pts, by = c('x', 'y'))
@@ -83,12 +88,33 @@ mcn_df_smry |>
     `I/P` > 0) |> 
   ggplot(aes(mcn, `I/P`)) +
   geom_point(alpha = 0.1) +
-  stat_smooth(method = 'nls',
-              formula = y ~ a * log(x)+b,
-              mapping = aes(colour = 'nls'),
-              se = FALSE,
-              method.args = list(start = list(a=1,b=1))) + 
-  stat_smooth(method = 'lm', formula = y ~ x -1 )
+  ylab('Interception Efficiency (-)') +
+  xlab('Mean Contact Number (-)') #+
+  # stat_smooth(method = 'nls',
+  #             formula = y ~ a * log(x)+b,
+  #             mapping = aes(colour = 'nls'),
+  #             se = FALSE,
+  #             method.args = list(start = list(a=1,b=1))) + 
+  # stat_smooth(method = 'lm', formula = y ~ x -1 )
+
+ggsave(paste0('figs/voxrs/scatter/',
+              plot, "_", 'mean_contact_number_vs_ip_phi_',
+              phi_from, '_', phi_to, '_theta_', theta_from, '_', theta_to, '.png'), width = 6, height = 5, device = png)
+
+mcn_df_smry |> 
+  filter(
+    mcn > 0,
+    `I/P` > 0) |> 
+  ggplot(aes(1-tau, `I/P`)) +
+  geom_point(alpha = 0.1) + 
+  stat_smooth(method = 'lm', formula = y ~ x -1 ) +
+  ylab('Interception Efficiency (-)') +
+  xlab('Snow-leaf Contact Area Ratio (-)')
+
+ggsave(paste0('figs/voxrs/scatter/',
+              plot, "_", 'lca_vs_ip_phi_',
+              phi_from, '_', phi_to, '_theta_', theta_from, '_', theta_to, '.png'), width = 6, height = 5, device = png)
+
 
 # facet all zenith angles
 # mcn_df |> 
@@ -195,3 +221,50 @@ mcn_df_smry |>
 ggsave(paste0('figs/voxrs/scatter/',
               plot, "_", 'mean_contact_number_vs_ip_phi_',
               phi_from, '_', phi_to, '_theta_', theta_from, '_', theta_to, '.png'), width = 6, height = 5, device = png)
+
+# Try same as above but aggregate spatially ----
+
+agg_res <- 5
+
+## by mean contact number ----
+mcn_rast <- rasterise_df(mcn_df_smry, 0.25, 'mcn')
+names(mcn_rast) <- 'mcn'
+
+mcn_rast_rsmpl <- resample_rast(mcn_rast, agg_res, 'average')
+
+ip_rast_rsmpl <- resample_rast(ip_rast, agg_res, 'average')
+
+rast <- c(mcn_rast_rsmpl, ip_rast_rsmpl)
+
+ip_pts_rsmpl <- terra::as.points(rast) |> # removing the left join didnt save much time
+  as.data.frame(geom="XY")
+
+ggplot(ip_pts_rsmpl, aes(mcn, `I/P`)) +
+  geom_point() +
+  ylab('Interception Efficiency (-)') +
+  xlab('Mean Contact Number (-)')
+
+ggsave(paste0('figs/voxrs/scatter/',
+              plot, "_", 'mean_contact_number_vs_ip_phi_',
+              phi_from, '_', phi_to, '_theta_', theta_from, '_', theta_to, '_resample_', agg_res, 'm.png'), width = 6, height = 5, device = png)
+
+## by mean canopy cover ----
+
+lca_rast <- 1-rasterise_df(mcn_df_smry, 0.25, 'tau')
+names(lca_rast) <- 'lca'
+
+lca_rast_rsmpl <- resample_rast(lca_rast, agg_res, 'average')
+
+rast <- c(lca_rast_rsmpl, ip_rast_rsmpl)
+
+ip_pts_rsmpl <- terra::as.points(rast) |> # removing the left join didnt save much time
+  as.data.frame(geom="XY")
+
+ggplot(ip_pts_rsmpl, aes(lca, `I/P`)) +
+  geom_point()+
+  ylab('Interception Efficiency (-)') +
+  xlab('Snow-leaf Contact Area Ratio (-)')
+
+ggsave(paste0('figs/voxrs/scatter/',
+              plot, "_", 'lca_vs_ip_phi_',
+              phi_from, '_', phi_to, '_theta_', theta_from, '_', theta_to, '_resample_', agg_res, 'm.png'), width = 6, height = 5, device = png)

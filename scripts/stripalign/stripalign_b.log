@@ -1,0 +1,11 @@
+[background thread log]
+Log started: Thu Apr 25 17:04:29 2024
+Running stripalign:
+execpath='/home/alex/bin/stripalign/stripalign' 
+dir='/home/alex/local-usask/analysis/lidar-processing/scripts/stripalign/' 
+Renamed existing /home/alex/bin/stripalign/stripalign_b.log using timestamp
+00007a0f29f01640:   / th_heartbeat start
+00007a0f29f01640:   | th_heartbeat stop
+EXIT_CODE=1
+TOTAL TIME: Clock=00:00:00.5 (0.050 s) - Real=00:00:00 (0 s) 
+Log ended: Thu Apr 25 17:04:29 2024

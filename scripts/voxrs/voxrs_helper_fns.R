@@ -32,9 +32,10 @@ set_suffix <- function(theta) {
   return(suffix)
 }
 
-#' Correlate VoxRS Mean Contact Number and Interception Efficiency over a grid area
+#' Correlate VoxRS Canopy Products and Interception Efficiency over a grid area
 #'
 #' @param phi_theta_pairs list of phi and theta pairs
+#' @param var String describing the var of interest 'cn' for contact number, i.e. the mean theoretical number of canopy contacts for a given ray, or 'tau' for light transmittance, or 'sca' for snow contact area which is canopy coverage shifted by trajectory angle
 #' @param ip_df data frame with x, y and interception efficiency. XY must match with the voxrs h5 file outputs.
 #' @param cn_coef coef to relate expected returns along a ray (voxrs default
 #'   output) to contact number. 0.38 is the default from the VoxRS package, also
@@ -72,12 +73,13 @@ regress_mcn_ip <- function(phi_theta_pairs, ip_df, cn_coef = 0.38){
   
   er <- h5_data[4,] # expected returns along a ray
   cn <- er * cn_coef
+  tau <- exp(-h5_data[4,] * cn_coef)
   
   # use this if our ncells do not match between IP and MCN
   # mcn_df <- data.frame(
-  #   x = h5_pointer[1,],
-  #   y = h5_pointer[2,],
-  #   mcn = h5_pointer[3,])
+  #   x = h5_data[1,],
+  #   y = h5_data[2,],
+  #   mcn = h5_data[4,])
   # mcn_ip <- left_join(mcn_df, ip_df, by = c('x', 'y'))
   
   h5closeAll()
@@ -192,3 +194,59 @@ rasterise_canopy_coverage_from_h5 <- function(phi, theta, h5_basename){
   return(cc_rast)
   
 }
+
+#' Rasterise Dataframe of XY Pairs
+#'
+#' @param dataframe dataframe of equal spaced xy pairs usually the output from voxrs .h5 file which is really a tif converted to a df
+#' @param resolution resolution of the input raster
+#' @param var string referencing the column within the dataframe to be rasterised
+#'
+#' @return
+#' @export
+#'
+#' @examples
+rasterise_df <- function(dataframe, resolution, var){
+  
+  vect <- terra::vect(dataframe, geom = c("x", "y"), crs = "epsg:32611")
+  
+  bbox <- terra::ext(vect)
+  
+  template_rast <- terra::rast(
+    resolution = resolution,
+    bbox,
+    vals = NA_real_,
+    crs = "epsg:32611"
+  )
+  
+  rast <- terra::rasterize(vect, template_rast, var)
+  
+  return(rast)
+  
+}
+
+#' Resample Raster to Coarser Resolution
+#'
+#' @param raster input raster to be coarsened
+#' @param resolution desired resolution in metres 
+#' @param fun string referring the function to be used for aggregating ('med' for median, 'mean' for mean)
+#'
+#' @return
+#' @export
+#'
+#' @examples
+resample_rast <- function(raster, resolution, fun){
+  bbox <- terra::ext(raster)
+  
+  # construct raster so cells match up with centre of dots
+  template_rast <- terra::rast(
+    resolution = resolution,
+    bbox,
+    vals = NA_real_,
+    crs = "epsg:32611"
+  )
+  
+  # take the median of the cells w/in out coarser template
+  rsmpl <-
+    terra::resample(raster, template_rast, method = fun)
+}
+
