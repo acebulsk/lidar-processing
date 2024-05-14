@@ -96,13 +96,13 @@ regress_mcn_ip <- function(phi_theta_pairs, ip_df){
 #' @export
 #'
 #' @examples
-compile_mcn <- function(phi_theta_pairs){
+compile_mcn <- function(phi_theta_pairs, h5_basefilename){
   phi <- phi_theta_pairs[1]
   theta <- phi_theta_pairs[2]
   
   suffix <- set_suffix(theta)
   
-  h5filename <- paste0(h5_basename,
+  h5filename <- paste0(h5_basefilename,
                        "_",
                        suffix,
                        '.h5')
