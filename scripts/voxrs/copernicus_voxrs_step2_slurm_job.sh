@@ -13,8 +13,8 @@
 #SBATCH --error=/globalhome/zvd094/HPC/lidar-processing/scripts/voxrs/slurm-logs/slurm-%A_%a.err
 #SBATCH --out=/globalhome/zvd094/HPC/lidar-processing/scripts/voxrs/slurm-logs/slurm-%A_%a.out
 
-#module load gcc/9.3.0
-#module load geo-stack
+module load gcc/9.3.0
+module load geo-stack
 
 step=15 # 15 degress across 360
 offset=$SLURM_ARRAY_TASK_ID # get ID, should be [0,23] with a 15 deg step

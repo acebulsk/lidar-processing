@@ -1,9 +1,9 @@
 ---
 # DATA INPUT PARAMETERS
-config_id: '23_072_vox_len_0.25m_sa' # (str) - unique identifier for this configuration, used for voxel space identification (use same in config 2)
+config_id: '23_072_vox_len_0.25m_sa_thin' # (str) - unique identifier for this configuration, used for voxel space identification (use same in config 2)
 working_dir: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/processed/23_072/voxrs' # (str) - working directory for intermediate and output files (use same in config 2)
 
-las_in: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/pointclouds_mergeclip/23_072_sa.las' # (str) - complete path to input .las file
+las_in: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/pointclouds_mergeclip_thin/23_072_sa_thin_925.las' # (str) - complete path to input .las file
 traj_in: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/metadata/drone_trajectory/23_072_all_lidar_trajectory.txt' # (str) - complete path to trajectory file (.csv) corresponding to las file.
           # trajectory file must include the following header labels: Time[s], Easting[m], Northing[m], Height[m]
           # make sure the time units in the las file and traj file are the same. Standard GPS time is better than GPS seconds of the week. 
