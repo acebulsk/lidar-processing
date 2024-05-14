@@ -48,4 +48,12 @@ vignettes/*.pdf
 data/
 *.html
 *.qgz
+<<<<<<< HEAD
 figs/
+=======
+
+# Logs
+*.log
+*.out
+*.err
+>>>>>>> 64cc40b (started tracking copernicus config files)

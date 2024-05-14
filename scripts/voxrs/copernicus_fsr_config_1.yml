@@ -1,0 +1,19 @@
+---
+# DATA INPUT PARAMETERS
+config_id: '23_072_vox_len_0.25m_sa' # (str) - unique identifier for this configuration, used for voxel space identification (use same in config 2)
+working_dir: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/processed/23_072/voxrs' # (str) - working directory for intermediate and output files (use same in config 2)
+
+las_in: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/pointclouds_mergeclip/23_072_sa.las' # (str) - complete path to input .las file
+traj_in: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/metadata/drone_trajectory/23_072_all_lidar_trajectory.txt' # (str) - complete path to trajectory file (.csv) corresponding to las file.
+          # trajectory file must include the following header labels: Time[s], Easting[m], Northing[m], Height[m]
+          # make sure the time units in the las file and traj file are the same. Standard GPS time is better than GPS seconds of the week. 
+return_set: "first"  # (str) - .las returns to be considered in sampling ('first' [recommended], 'last', or 'all')
+drop_class: 31 # (int) single class to be dropped from .las file prior to interpolation (blank or -1 for none)
+
+# VOXEL SPACE PARAMETERS
+cw_rotation_deg: 0  # (int) rotation of primary voxelspace axis in degrees (default 0)
+voxel_length: 0.25  # cubic voxel dimension in meters
+
+# PROCESSING PARAMETERS
+las_traj_chunksize: 10000000  # (int) point cloud chunk size for interpolation with trajectory (default 10000000, decrease for memory management)
+z_slices: 4  # (int) - number of horizontal layers for chunking of ray sampling (default 4, increase for memory management)
