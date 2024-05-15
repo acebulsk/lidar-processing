@@ -19,6 +19,13 @@ build_phi_theta_pairs <- function(phi_from, phi_to, phi_by,
 }
 
 
+traj_angle_deg <- function(wind_speed, velocity){
+  slope <- -velocity/wind_speed
+  angle_deg <- atan(slope) * 180 / pi
+  
+  return(angle_deg)
+}
+
 set_suffix <- function(theta) {
   ranges <-
     cut(
@@ -103,13 +110,13 @@ regress_mcn_ip <- function(phi_theta_pairs, ip_df, cn_coef = 0.38){
 #' @export
 #'
 #' @examples
-compile_mcn <- function(phi_theta_pairs, cn_coef = 0.38){
+compile_mcn <- function(phi_theta_pairs, h5_basefilename, cn_coef = 0.38){
   phi <- phi_theta_pairs[1]
   theta <- phi_theta_pairs[2]
   
   suffix <- set_suffix(theta)
   
-  h5filename <- paste0(h5_basename,
+  h5filename <- paste0(h5_basefilename,
                        "_",
                        suffix,
                        '.h5')
