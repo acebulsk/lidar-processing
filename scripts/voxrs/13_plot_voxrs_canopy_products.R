@@ -12,26 +12,9 @@ plot_fs2 <- readRDS(paste0(grid_stats_path, event_ids[2], '.rds'))  |>
          event = event_ids[2]) 
 plot_fs <- rbind(plot_fs1, plot_fs2)
 
-mcn_df_out1 <- readRDS(paste0(
-  voxrs_processed_outputs,
-  event_ids[1],
-  '_phiby_',
-  phi_by,
-  '_thetaby_',
-  theta_by,
-  '.rds'
-)) |> mutate(event = event_ids[1])
-mcn_df_out2 <- readRDS(paste0(
-  voxrs_processed_outputs,
-  event_ids[2],
-  '_phiby_',
-  phi_by,
-  '_thetaby_',
-  theta_by,
-  '.rds'
-)) |> mutate(event = event_ids[2])
+mcn_df_paths <- list.files(paste0(data_dir, 'data/hemi_stats'), '*'))
 
-mcn_df_out <- rbind(mcn_df_out1, mcn_df_out2) |> 
+mcn_df_out <- purrr::map_dfr(mcn_df_paths, readRDS) |> 
   mutate(traj_angle = phi_d - 90) |> 
   left_join(plot_fs, by = c('plot_name', 'event')) |> 
   left_join(example_traj, by = 'traj_angle',
@@ -65,7 +48,7 @@ mcn_df_out |>
                         end = .7, name = 'Plot Name') +
   facet_grid(cols = vars(name), scales = 'free_x')
 
-ggsave(paste0('figs/voxrs/scatter/NO_TREEWELLS_traj_angle_and_wind_vs_inc_canopy_cover_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
+ggsave(paste0(figs_path_out, phi_by, '_thetaby_', theta_by, '_cc_perc_inc.png'), device = png,
        width = 6.5, height = 3)
 
 mcn_df_out |> 
@@ -88,7 +71,7 @@ mcn_df_out |>
                         end = .7, name = 'Plot Name') +
   facet_grid(cols = vars(name), scales = 'free_x')
 
-ggsave(paste0(figs_path_out, phi_by, '_thetaby_', theta_by, '.png'), device = png,
+ggsave(paste0(figs_path_out, phi_by, '_thetaby_', theta_by, '_mean_contact_number.png'), device = png,
        width = 6.5, height = 3)
 
 mcn_df_out |> 
@@ -111,12 +94,12 @@ mcn_df_out |>
                         end = .7, name = 'Plot Name') +
   facet_grid(cols = vars(name), scales = 'free_x')
 
-ggsave(paste0('figs/voxrs/scatter/NO_TREEWELLS_traj_angle_and_wind_vs_canopy_coverage_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
+ggsave(paste0(figs_path_out, phi_by, '_thetaby_', theta_by, '_canopy_coverage.png'), device = png,
        width = 6.5, height = 3)
 
 
 mcn_df_out |> 
-  filter(phi_d > 0) |> 
+#  filter(phi_d > 0) |> 
   ggplot(aes(phi_d, tau)) +
   geom_line(aes(colour = plot_name, linetype = event)) + 
   # geom_line(aes(y = mod_mcn_lm, linetype = 'lm')) +
@@ -125,7 +108,7 @@ mcn_df_out |>
   xlab('Hydrometeor Trajectory (deg. °)') +
   scale_color_viridis_d(option = 'F',
                         direction = -1,
-                        end = .7, name = 'Plot Name') 
+                        end = .7, name = 'Plot Name')
 
-ggsave(paste0('figs/voxrs/scatter/NO_TREEWELLS_traj_angle_vs_transmittance_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
+ggsave(paste0(figs_path_out, phi_by, '_thetaby_', theta_by, '_tau.png'), device = png,
        width = 6, height = 5)
