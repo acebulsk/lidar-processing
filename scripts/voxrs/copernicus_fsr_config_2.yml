@@ -1,8 +1,8 @@
 ---
 # DATA INPUT PARAMETERS
-config_id: '23_073_vox_len_0.25m_sa' # (str) - unique identifier for this configuration, used for voxel space identification (use same in config 1)
-working_dir: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/processed/23_073/voxrs/' # (str) - working directory for intermediate and output files (use same in config 1)
-runtag: 'gridgen_v2.0.0_sa_twells_PWL_SW'  # (str) - to be incorporated in output file names to destinguish between different runs. Blank string is fine. w_tree_well relates to dsm where cells have not been removed if they dont have lidar SWE
+config_id: '23_027_vox_len_0.25m_sa' # (str) - unique identifier for this configuration, used for voxel space identification (use same in config 1)
+working_dir: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/processed/23_027/voxrs/' # (str) - working directory for intermediate and output files (use same in config 1)
+runtag: 'gridgen_v2.0.0_sa_twells_PWL_E'  # (str) - to be incorporated in output file names to destinguish between different runs. Blank string is fine. w_tree_well relates to dsm where cells have not been removed if they dont have lidar SWE
 
 # VOLUMETRIC RESAMPLING PARAMETERS
 resample_las: False   # (bool) - Do you want to generate a resampled point cloud? (if False, subsequent parameters are ignored)
@@ -17,9 +17,9 @@ sample_threshold: 0  # (int) noise filter will drop all returns from voxels wher
 resample_grid: True # (bool) - Do you want to resample at a fixed angle across a grid? (if False, subsequent parameters are ignored)
 # offset above ground is handeled by dsm creation here
 # use this one if you want to remove grids that do not have lidar snow depth (i.e., need this to compare raster to snow products later w/o doing a spatial join)
-#dem_in: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/dsm_interpolated_elevation/23_073_v2.0.0_sa_PWL_SW_dsm_elevation_resamp_crop_mask_ofst_abv_grnd_0.25m.tif' # (str) complete path to raster (geotif) file with coordinates and elevations at which to calculate hemispheres, masked to points of interest, consider implications of removing points without lidar SWE obs (need to for correlation but maybe shouldnt for other plotting)
+#dem_in: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/dsm_interpolated_elevation/23_027_v2.0.0_sa_PWL_E_dsm_elevation_resamp_crop_mask_ofst_abv_grnd_0.25m.tif' # (str) complete path to raster (geotif) file with coordinates and elevations at which to calculate hemispheres, masked to points of interest, consider implications of removing points without lidar SWE obs (need to for correlation but maybe shouldnt for other plotting)
 # use this one if you dont want to remove grid cells that dont have lidar snow depths (i.e., use this for the canopy products that will not be compared to snow productsx)
-dem_in: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/dsm_interpolated_elevation/23_073_v2.0.0_sa_PWL_SW_dsm_elevation_resamp_crop_plot_only_ofst_abv_grnd_0.25m.tif'
+dem_in: '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/data/dsm_interpolated_elevation/23_027_v2.0.0_sa_PWL_E_dsm_elevation_resamp_crop_plot_only_ofst_abv_grnd_0.25m.tif'
 phi_theta_file: ''
 # phi: 0  # zenith angle of ray, calculated at each point (degrees). Can be a single value or a YAML list. This could be pulled direct from phi_theta_lookup.csv.
 # theta: 0  # azimuth angle of ray, calculated at each point (degrees clockwise from north, from above looking down). Can be a single value or a YAML list (same length as phi)
@@ -40,7 +40,7 @@ theta: [0, 360, 1] # min, max, by
         # template[(rays_out.y_index.values, rays_out.x_index.values, 1)] = rays_out.returns_std
 
 resample_hemi: False # (bool) - Do you want to generate synthetic hemispheres? (if False, subsequent parameters are ignored)
-pts_in: '/globalhome/zvd094/HPC/lidar-processing/data/dsm_interpolated_elevation/23_073_params_v1.0.0_dsm_elevation_resamp_crop_mask.csv'  # (str) complete path to .csv file with coordinates and elevations at which to calculate hemispheres
+pts_in: '/globalhome/zvd094/HPC/lidar-processing/data/dsm_interpolated_elevation/23_027_params_v1.0.0_dsm_elevation_resamp_crop_mask.csv'  # (str) complete path to .csv file with coordinates and elevations at which to calculate hemispheres
             # pts file must include the following header labels: id, easting_m, northing_m, elev_m
 img_size: 181  # angular resolution ~ # of samples across 180 deg
 max_phi_deg: 90  # (num) maximum zenith angle to sample [deg] (90 deg samples to horizon) 

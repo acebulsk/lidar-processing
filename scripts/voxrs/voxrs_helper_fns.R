@@ -1,5 +1,12 @@
 # VoxRS helper functions for dealing with mass amount of vox rs data
 
+traj_angle_deg <- function(wind_speed, velocity){
+  slope <- -velocity/wind_speed
+  angle_deg <- atan(slope) * 180 / pi
+  
+  return(angle_deg)
+}
+
 build_phi_theta_pairs <- function(phi_from, phi_to, phi_by,
                                   theta_from, theta_to, theta_by){
   

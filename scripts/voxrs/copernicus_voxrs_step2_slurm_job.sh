@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --time=10:00:00
-#SBATCH --job-name=voxrs-sliced
+#SBATCH --job-name=voxrs-step2
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=8G
@@ -10,8 +10,8 @@
 #SBATCH --account=hpc_c_giws_clark
 #SBATCH --mail-user=zvd094@usask.ca
 #SBATCH --mail-type=ALL
-#SBATCH --error=/globalhome/zvd094/HPC/lidar-processing/scripts/voxrs/slurm-logs/slurm-%A_%a.err
-#SBATCH --out=/globalhome/zvd094/HPC/lidar-processing/scripts/voxrs/slurm-logs/slurm-%A_%a.out
+#SBATCH --error=/globalhome/zvd094/HPC/lidar-processing/scripts/voxrs/slurm-logs-step2/slurm-%A_%a.err
+#SBATCH --out=/globalhome/zvd094/HPC/lidar-processing/scripts/voxrs/slurm-logs-step2/slurm-%A_%a.out
 
 module load gcc/9.3.0
 module load geo-stack
