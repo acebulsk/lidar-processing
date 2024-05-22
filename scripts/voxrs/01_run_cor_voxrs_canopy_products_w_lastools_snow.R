@@ -1,5 +1,5 @@
 # run the voxrs product sequence
-
+# warning the canopy product vs lidar snow correlations do not have data over the treewells
 library(terra)
 library(sf)
 library(purrr)
@@ -30,7 +30,7 @@ las_prj_name <- 'v2.0.0_sa'
 vox_id <- event_ids[1] # which day do we want canopy metrics for?
 # vox_config_id <- paste0(vox_id, '_vox_len_0.25m_')
 # barely noticble change after changing to strip align and corresponding new snow depth liadar measurements
-vox_config_id <- paste0(vox_id, '_vox_len_0.25m_sa_thin_gridgen_v2.0.0_sa_thin')
+vox_config_id <- paste0(vox_id, '_vox_len_0.25m_sa_gridgen_v2.0.0_sa')
 
 
 mcn_df_out <- data.frame()
@@ -53,14 +53,6 @@ for (plot in plot_names) {
 
 }
 
-
-traj_angle_deg <- function(wind_speed, velocity){
-  slope <- -velocity/wind_speed
-  angle_deg <- atan(slope) * 180 / pi
-  
-  return(angle_deg)
-}
-
 example_traj <- data.frame(
   wind_speed = seq(0,10,0.001),
   traj_angle = traj_angle_deg(seq(0,10,0.001),1) |> round(1))
@@ -73,7 +65,7 @@ plot_fs2 <- readRDS(paste0('data/grid_stats/plot_avg_forest_metricts_nadir_', ev
          event = event_ids[2]) 
 plot_fs <- rbind(plot_fs1, plot_fs2)
 
-mcn_df_pre_base <- readRDS(paste0(
+mcn_df_out1 <- readRDS(paste0(
   'data/hemi_stats/aggregate_hemi_stats_across_traj_angle_',
   event_ids[1],
   '_phiby_',
@@ -81,21 +73,8 @@ mcn_df_pre_base <- readRDS(paste0(
   '_thetaby_',
   theta_by,
   '.rds'
-)) |> mutate(event = event_ids[1],
-             test = 'base')
-
-mcn_df_pre_thin <- readRDS(paste0(
-  'data/hemi_stats/aggregate_hemi_stats_across_traj_angle_',
-  vox_config_id,
-  '_phiby_',
-  phi_by,
-  '_thetaby_',
-  theta_by,
-  '.rds'
-)) |> mutate(event = paste0(event_ids[1]),
-             test = 'thin')
-
-mcn_df_post_base <- readRDS(paste0(
+)) |> mutate(event = event_ids[1])
+mcn_df_out2 <- readRDS(paste0(
   'data/hemi_stats/aggregate_hemi_stats_across_traj_angle_',
   event_ids[2],
   '_phiby_',
@@ -103,25 +82,9 @@ mcn_df_post_base <- readRDS(paste0(
   '_thetaby_',
   theta_by,
   '.rds'
-)) |> mutate(event = event_ids[2],
-             test = 'base')
+)) |> mutate(event = event_ids[2])
 
-mcn_df_post_thin <- readRDS(paste0(
-  'data/hemi_stats/aggregate_hemi_stats_across_traj_angle_',
-  event_ids[2],
-  '_phiby_',
-  phi_by,
-  '_thetaby_',
-  theta_by,
-  '.rds'
-)) |> mutate(event = event_ids[2],
-             test = 'thin')
-
-
-
-mcn_df_out <- rbind(mcn_df_post_base, mcn_df_post_thin) |> 
-  rbind(mcn_df_pre_base) |> 
-  rbind(mcn_df_pre_thin) |>
+mcn_df_out <- rbind(mcn_df_out1, mcn_df_out2) |> 
   mutate(traj_angle = phi_d - 90) |> 
   left_join(plot_fs, by = c('plot_name', 'event')) |> 
   left_join(example_traj, by = 'traj_angle',
@@ -130,7 +93,8 @@ mcn_df_out <- rbind(mcn_df_post_base, mcn_df_post_thin) |>
          cc_perc_increase = cc-cc_nadir,
          cc_multiplier = cc/cc_nadir,
          cc_test = cc_multiplier*cc_nadir,
-         plot_name = ifelse(plot_name == 'FSR_S', "FT", "PWL")) 
+         plot_name = ifelse(plot_name == 'FSR_S', "FT", "PWL"),
+         event = ifelse(event == '23_072', 'snow-off', 'snow-on')) 
 
 mcn_nadir_smry <- mcn_df_out |> 
   filter(phi_d == 0) |> 
@@ -155,23 +119,39 @@ mcn_df_out$mod_mcn_lm <- exp(predict(model_lm, mcn_df_out))
 mcn_df_out$mod_mcn_nls <- predict(model_nls, mcn_df_out)
 
 mcn_df_out |> 
-  ggplot(aes(traj_angle, cc_perc_increase)) +
-  geom_point(aes(colour = plot_name, shape = event)) + 
+  rename(`Trajectory Angle (°)` = traj_angle,
+         `Mid Canopy Wind Speed (m/s)` = wind_speed) |> 
+  pivot_longer(c(`Trajectory Angle (°)`,
+                 `Mid Canopy Wind Speed (m/s)`)) |> 
+  mutate(name = factor(
+    name,
+    levels = c('Trajectory Angle (°)', 'Mid Canopy Wind Speed (m/s)')
+  )) |>
+  ggplot(aes(value, cc_perc_increase)) +
+  geom_line(aes(colour = plot_name, linetype = event)) + 
   # geom_line(aes(y = mod_mcn_lm, linetype = 'lm')) +
   # geom_line(aes(y = mod_mcn_nls, linetype = 'nls')) +
   ylab('Increase in Canopy Coverage (-)') +
   xlab(element_blank()) +
   scale_color_viridis_d(option = 'F',
                         direction = -1,
-                        end = .7, name = 'Plot Name')  +
-  facet_grid(~test, scales = 'free')
+                        end = .7, name = 'Plot Name') +
+  facet_grid(cols = vars(name), scales = 'free_x')
 
-ggsave(paste0('figs/voxrs/scatter/THINNING_TEST_traj_angle_and_wind_vs_inc_canopy_cover_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
+ggsave(paste0('figs/voxrs/scatter/NO_TREEWELLS_traj_angle_and_wind_vs_inc_canopy_cover_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
        width = 6.5, height = 3)
 
 mcn_df_out |> 
-  ggplot(aes(traj_angle, mcn)) +
-  geom_point(aes(colour = plot_name, shape = event)) + 
+  rename(`Trajectory Angle (°)` = traj_angle,
+         `Mid Canopy Wind Speed (m/s)` = wind_speed) |> 
+  pivot_longer(c(`Trajectory Angle (°)`,
+                 `Mid Canopy Wind Speed (m/s)`)) |> 
+  mutate(name = factor(
+    name,
+    levels = c('Trajectory Angle (°)', 'Mid Canopy Wind Speed (m/s)')
+  )) |>
+  ggplot(aes(value, mcn)) +
+  geom_line(aes(colour = plot_name, linetype = event)) + 
   # geom_line(aes(y = mod_mcn_lm, linetype = 'lm')) +
   # geom_line(aes(y = mod_mcn_nls, linetype = 'nls')) +
   ylab('Mean Contact Number (-)') +
@@ -179,22 +159,32 @@ mcn_df_out |>
   scale_color_viridis_d(option = 'F',
                         direction = -1,
                         end = .7, name = 'Plot Name') +
-  facet_grid(~test, scales = 'free')
+  facet_grid(cols = vars(name), scales = 'free_x')
 
-ggsave(paste0('figs/voxrs/scatter/THINNING_TEST_traj_angle_and_wind_vs_contact_number_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
+ggsave(paste0('figs/voxrs/scatter/NO_TREEWELLS_traj_angle_and_wind_vs_contact_number_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
        width = 6.5, height = 3)
 
 mcn_df_out |> 
-  ggplot(aes(traj_angle, cc)) +
-  geom_point(aes(colour = plot_name, shape = event)) + 
+  rename(`Trajectory Angle (°)` = traj_angle,
+         `Mid Canopy Wind Speed (m/s)` = wind_speed) |> 
+  pivot_longer(c(`Trajectory Angle (°)`,
+                 `Mid Canopy Wind Speed (m/s)`)) |> 
+  mutate(name = factor(
+    name,
+    levels = c('Trajectory Angle (°)', 'Mid Canopy Wind Speed (m/s)')
+  )) |>
+  ggplot(aes(value, cc)) +
+  geom_line(aes(colour = plot_name, linetype = event)) + 
+  # geom_line(aes(y = mod_mcn_lm, linetype = 'lm')) +
+  # geom_line(aes(y = mod_mcn_nls, linetype = 'nls')) +
   ylab('Apparent Canopy Coverage (-)') +
-  xlab('Trajectory Angle (°)')+
+  xlab(element_blank())+
   scale_color_viridis_d(option = 'F',
                         direction = -1,
-                        end = .7, name = 'Plot Name')  +
-  facet_grid(~test, scales = 'free')
+                        end = .7, name = 'Plot Name') +
+  facet_grid(cols = vars(name), scales = 'free_x')
 
-ggsave(paste0('figs/voxrs/scatter/THINNING_TEST_traj_angle_and_wind_vs_canopy_coverage_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
+ggsave(paste0('figs/voxrs/scatter/NO_TREEWELLS_traj_angle_and_wind_vs_canopy_coverage_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
        width = 6.5, height = 3)
 
 
@@ -210,7 +200,7 @@ mcn_df_out |>
                         direction = -1,
                         end = .7, name = 'Plot Name') 
 
-ggsave(paste0('figs/voxrs/scatter/traj_angle_vs_transmittance_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
+ggsave(paste0('figs/voxrs/scatter/NO_TREEWELLS_traj_angle_vs_transmittance_phiby_', phi_by, '_thetaby_', theta_by, '.png'), device = png,
        width = 6, height = 5)
 
 
