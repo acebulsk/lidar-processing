@@ -34,11 +34,18 @@ hemi_high_cor <-  hemi_df |>
   filter(rs > upper2_5)
 
 phi_from <- 0
-phi_to <- max(hemi_high_cor$phi_d) |> round()
+phi_to <- 5
 phi_by <- 1
-theta_from <- min(hemi_high_cor$theta_d) |> round()
-theta_to <- max(hemi_high_cor$theta_d) |> round()
+theta_from <- 0
+theta_to <- 359
 theta_by <- 1
+
+# phi_from <- 0
+# phi_to <- max(hemi_high_cor$phi_d) |> round()
+# phi_by <- 1
+# theta_from <- min(hemi_high_cor$theta_d) |> round()
+# theta_to <- max(hemi_high_cor$theta_d) |> round()
+# theta_by <- 1
 
 # data inputs ----
 
@@ -70,9 +77,11 @@ phi_theta_list <-
                         theta_from, theta_to, theta_by)
 
 #mcn_list <- lapply(phi_theta_list, compile_mcn)
-mcn_list <- pbapply::pblapply(phi_theta_list, compile_mcn, cl = 8)
+mcn_list <- pbapply::pblapply(phi_theta_list, compile_mcn, h5_basename, cl = 8)
 
 mcn_df <- do.call(rbind, mcn_list) 
+rm(mcn_list)
+gc()
 
 mcn_df_smry <- mcn_df |> 
   group_by(x, y) |> 
@@ -81,6 +90,9 @@ mcn_df_smry <- mcn_df |>
     mcn = mean(mcn)
   ) |> 
   left_join(ip_pts, by = c('x', 'y'))
+
+rm(mcn_df)
+gc()
 
 mcn_df_smry |> 
   filter(
@@ -107,7 +119,7 @@ mcn_df_smry |>
     `I/P` > 0) |> 
   ggplot(aes(1-tau, `I/P`)) +
   geom_point(alpha = 0.1) + 
-  stat_smooth(method = 'lm', formula = y ~ x -1 ) +
+  # stat_smooth(method = 'lm', formula = y ~ x -1 ) +
   ylab('Interception Efficiency (-)') +
   xlab('Snow-leaf Contact Area Ratio (-)')
 
@@ -241,6 +253,7 @@ ip_pts_rsmpl <- terra::as.points(rast) |> # removing the left join didnt save mu
 
 ggplot(ip_pts_rsmpl, aes(mcn, `I/P`)) +
   geom_point() +
+  ggpubr::stat_cor() +
   ylab('Interception Efficiency (-)') +
   xlab('Mean Contact Number (-)')
 
@@ -262,6 +275,7 @@ ip_pts_rsmpl <- terra::as.points(rast) |> # removing the left join didnt save mu
 
 ggplot(ip_pts_rsmpl, aes(lca, `I/P`)) +
   geom_point()+
+  ggpubr::stat_cor() +
   ylab('Interception Efficiency (-)') +
   xlab('Snow-leaf Contact Area Ratio (-)')
 
