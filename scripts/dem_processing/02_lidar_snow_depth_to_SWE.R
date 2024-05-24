@@ -115,3 +115,61 @@ terra::writeRaster(
     '_crop_mask.tif'
   ),  overwrite = T
 )
+
+for(plot in 1:nrow(fsr_plots)){
+  plot_mask_sf <- fsr_plots[plot, ]
+  swe_rast_plot <- terra::crop(lidr_swe_crop, plot_mask_sf, mask = T)
+  
+  terra::writeRaster(
+    swe_rast_plot,
+    paste0(
+      'data/dsm_swe/',
+      pre_post_ids[1],
+      '_',
+      pre_post_ids[2],
+      '_',
+      prj_name,
+      '_',
+      plot_mask_sf$name,
+      '_',
+      "swe_normalised_resample_0.25_crop_mask.tif"
+    ),  overwrite = T
+  )
+  
+}
+
+# plot just PWL SW
+
+pwl_e <- fsr_plots |> filter(name == 'PWL_E')
+
+# Save the plot for lidr_sd
+png(paste0(
+  'figs/maps/pwl_e_',
+  pre_post_ids[1],
+  '_',
+  pre_post_ids[2],
+  '_',
+  prj_name,
+  'swe_normalised_resample_crop_',
+  dsm_res_custm,
+  '.png'
+), width = 1000, height = 800, res = 200)
+plot(terra::crop(lidr_swe_crop, pwl_e, mask = T), main = 'PWL: 𝚫 SWE (kg m⁻²)', col = viridis(100))
+dev.off()
+
+fsr_s <- fsr_plots |> filter(name == 'FSR_S')
+
+# Save the plot for lidr_sd
+png(paste0(
+  'figs/maps/fsr_s_',
+  pre_post_ids[1],
+  '_',
+  pre_post_ids[2],
+  '_',
+  prj_name,
+  'swe_normalised_resample_crop_',
+  dsm_res_custm,
+  '.png'
+), width = 1000, height = 800, res = 200)
+plot(terra::crop(lidr_swe_crop, fsr_s, mask = T), main = 'FT: 𝚫 SWE (kg m⁻²)', col = viridis(100))
+dev.off()

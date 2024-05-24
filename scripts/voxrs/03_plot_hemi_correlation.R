@@ -14,10 +14,10 @@ colnames(hemi_df) <- c('phi_d',
                        'rp',
                        'rs')
 
-upper2_5 <- hemi_df$rs |> quantile(0.975)
+upper2_5 <- hemi_df$rp |> quantile(0.975)
 
 hemi_high_cor <-  hemi_df |> 
-  filter(rs > upper2_5)
+  filter(rp > upper2_5)
 
 plot_theta_high_cor <- hemi_high_cor |> 
   pull(theta_d) |> 
@@ -79,11 +79,12 @@ p_tile <-
 
 # p_tile
 
-ggsave(paste0('figs/voxrs/hemis/cor_cn_ip/full_hemi_rho_s_cor_mcn_ip_',
+ggsave(paste0('figs/voxrs/hemis/cor_cn_ip/full_hemi_rho_s_cor_lca_ip_',
               vox_config_id,
               "_",
               plot,
               '.png'),
+       p_tile,
        width = 4, height = 3, device = png)
 
 # PEARSON CORELLATION ----
@@ -126,11 +127,12 @@ p_tile <-
 
 # p_tile
 
-ggsave(paste0('figs/voxrs/hemis/cor_cn_ip/full_hemi_rho_p_cor_mcn_ip_',
+ggsave(paste0('figs/voxrs/hemis/cor_cn_ip/full_hemi_rho_p_cor_lca_ip_',
               vox_config_id,
                "_",
                plot,
               '.png'),
+       p_tile,
        width = 4, height = 3, device = png)
 
 # Other plotting 

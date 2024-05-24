@@ -47,7 +47,7 @@ rm(mcn_df_smry)
 saveRDS(mcn_df_out,
         paste0(
           'data/hemi_stats/aggregate_hemi_stats_across_traj_angle_',
-          vox_config_id,
+          vox_id,
           '_phiby_',
           phi_by,
           '_thetaby_',

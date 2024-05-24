@@ -7,7 +7,7 @@ library(rhdf5)
 library(tidyverse)
 library(modelr)
 
-n_cores <- 4
+n_cores <- 8
 
 source('scripts/voxrs/voxrs_helper_fns.R')
 
@@ -85,7 +85,7 @@ mcn_df_out2 <- readRDS(paste0(
 )) |> mutate(event = event_ids[2])
 
 mcn_df_out <- rbind(mcn_df_out1, mcn_df_out2) |> 
-  mutate(traj_angle = phi_d - 90) |> 
+  mutate(traj_angle = phi_d) |> 
   left_join(plot_fs, by = c('plot_name', 'event')) |> 
   left_join(example_traj, by = 'traj_angle',
             multiple = 'first') |> 
@@ -285,7 +285,7 @@ ggsave(paste0('figs/voxrs/scatter/traj_angle_vs_canopycover_', phi_by, '_thetaby
        width = 6, height = 5)
 
 preds <- preds |>
-  mutate(traj_angle = phi_d - 90) |>
+  mutate(traj_angle = phi_d) |>
   left_join(example_traj, by = 'traj_angle',
             multiple = 'first')
 

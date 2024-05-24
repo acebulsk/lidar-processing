@@ -1,9 +1,10 @@
 # VoxRS helper functions for dealing with mass amount of vox rs data
 
+# returns angle in degrees from zenith
 traj_angle_deg <- function(wind_speed, velocity){
-  slope <- -velocity/wind_speed
+  slope <- wind_speed/velocity
   angle_deg <- atan(slope) * 180 / pi
-  
+
   return(angle_deg)
 }
 
@@ -25,14 +26,6 @@ build_phi_theta_pairs <- function(phi_from, phi_to, phi_by,
   
 }
 
-
-traj_angle_deg <- function(wind_speed, velocity){
-  slope <- -velocity/wind_speed
-  angle_deg <- atan(slope) * 180 / pi
-  
-  return(angle_deg)
-}
-
 set_suffix <- function(theta) {
   ranges <-
     cut(
@@ -50,7 +43,6 @@ set_suffix <- function(theta) {
 #'
 #' @param phi_theta_pairs list of phi and theta pairs
 #' @param var String describing the var of interest 'cn' for contact number, i.e. the mean theoretical number of canopy contacts for a given ray, or 'tau' for light transmittance, or 'sca' for snow contact area which is canopy coverage shifted by trajectory angle
-#' @param ip_df data frame with x, y and interception efficiency. XY must match with the voxrs h5 file outputs.
 #' @param cn_coef coef to relate expected returns along a ray (voxrs default
 #'   output) to contact number. 0.38 is the default from the VoxRS package, also
 #'   see supplementary material for Staines & Pomeroy 2023
@@ -59,7 +51,7 @@ set_suffix <- function(theta) {
 #' @export
 #'
 #' @examples
-regress_mcn_ip <- function(phi_theta_pairs, ip_df, cn_coef = 0.38){
+regress_vox_metric_snow <- function(phi_theta_pairs, vox_metric, snow_vect, cn_coef = 0.38){
   
   phi <- phi_theta_pairs[1]
   theta <- phi_theta_pairs[2]
@@ -86,8 +78,18 @@ regress_mcn_ip <- function(phi_theta_pairs, ip_df, cn_coef = 0.38){
   h5_data <- h5read(h5filename, h5_dataset) # same speed as `h5f$'p0_t0'`, the index arg slows this down, since files are small dont need to do this
   
   er <- h5_data[4,] # expected returns along a ray
-  cn <- er * cn_coef
-  tau <- exp(-h5_data[4,] * cn_coef)
+  if (vox_metric == 'cn') {
+    # calculate mean contact number
+    vox_vect <- er * cn_coef
+  }
+  if (vox_metric == 'tau') {
+    # calculate light transmittance
+    vox_vect <- exp(-h5_data[4,] * cn_coef)
+  }
+  if (vox_metric == 'cc') {
+    # calculate canopy coverage
+    vox_vect <- 1 - exp(-h5_data[4,] * cn_coef)
+  }
   
   # use this if our ncells do not match between IP and MCN
   # mcn_df <- data.frame(
@@ -98,8 +100,8 @@ regress_mcn_ip <- function(phi_theta_pairs, ip_df, cn_coef = 0.38){
   
   h5closeAll()
   
-  rp <- cor(cn, ip_pts_vect, method = 'pearson') # linear relationship
-  rs <- cor(cn, ip_pts_vect, method = 'spearman') # ranked values better for non-linear
+  rp <- cor(vox_vect, snow_vect, method = 'pearson') # linear relationship
+  rs <- cor(vox_vect, snow_vect, method = 'spearman') # ranked values better for non-linear
   
   phi_theta_pairs[3] <- rp
   phi_theta_pairs[4] <- rs
@@ -136,7 +138,7 @@ compile_mcn <- function(phi_theta_pairs, h5_basefilename, cn_coef = 0.38){
   phi_theta_mcn <- data.frame(
     x = h5_data[1,],
     y = h5_data[2,],
-    er = h5_data[4,], # estimated returns along a ray (-/m)
+    # er = h5_data[4,], # estimated returns along a ray (-/m)
     mcn = h5_data[4,] * cn_coef, # mean contact number (-)
     tau = exp(-h5_data[4,] * cn_coef),
     phi_d = as.numeric(phi),
@@ -159,7 +161,7 @@ compile_mcn <- function(phi_theta_pairs, h5_basefilename, cn_coef = 0.38){
 #' @export
 #'
 #' @examples
-rasterise_canopy_coverage_from_h5 <- function(phi, theta, h5_basename){
+rasterise_vox_metric_from_h5 <- function(phi, theta, h5_basename, vox_metric){
   
   suffix <- set_suffix(theta)
   
@@ -192,6 +194,8 @@ rasterise_canopy_coverage_from_h5 <- function(phi, theta, h5_basename){
   
   h5closeAll()
   
+  
+  
   er_vect <- vect(er_df, geom = c("x", "y"), crs = "epsg:32611")
   
   bbox <- terra::ext(er_vect)
@@ -203,7 +207,7 @@ rasterise_canopy_coverage_from_h5 <- function(phi, theta, h5_basename){
     crs = "epsg:32611"
   )
   
-  cc_rast <- rasterize(er_vect, template_rast, 'cc')
+  cc_rast <- rasterize(er_vect, template_rast, vox_metric)
   
   return(cc_rast)
   

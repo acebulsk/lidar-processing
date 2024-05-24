@@ -55,7 +55,11 @@ phi_theta_list <- asplit(phi_theta_df, 1)
 
 # cor_list_out <- lapply(phi_theta_list, regress_mcn_ip, ip_df = ip_pts)
 cor_list_out <-
-  pbapply::pblapply(phi_theta_list, regress_mcn_ip, ip_df = ip_pts_vect, cl = n_cores)
+  pbapply::pblapply(phi_theta_list,
+                    regress_vox_metric_snow,
+                    vox_metric = 'cc',
+                    snow_vect = ip_pts_vect,
+                    cl = n_cores)
 
 saveRDS(cor_list_out, 
         paste0('data/hemi_stats/full_hemi_correlation_grid_resampled_',

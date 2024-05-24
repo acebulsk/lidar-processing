@@ -8,7 +8,7 @@
 # constants ---- 
 
 dem_vert_ofst <- 0.25 # 1 m for 1 m voxels
-surv_id <- '23_072'
+surv_id <- '23_027'
 dsm_type <- "dsm_interpolated"
 
 # load data ----

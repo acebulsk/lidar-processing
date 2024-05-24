@@ -3,6 +3,7 @@ library(terra)
 library(viridis)
 library(rhdf5)
 library(tidyverse)
+source('scripts/voxrs/voxrs_helper_fns.R')
 
 cn_coef <- 0.38 # from VoxRS default, also see supplementary material for Staines & Pomeroy 2023
 
@@ -36,6 +37,8 @@ phi_theta_df <-
       'data/hemi_stats/hemi_avg_theta_phi_for_rho_s_upper_2_5th_percentile_',
       vox_config_id,
       "_",
+      las_prj_name,
+      "_",
       plot,
       '.rds'
     )
@@ -43,7 +46,7 @@ phi_theta_df <-
 
 phi <- phi_theta_df$phi |> round()
 theta <- phi_theta_df$theta |> round()
-cc_rast <- rasterise_canopy_coverage_from_h5(phi, theta, h5_basename)
+lca_rast <- rasterise_vox_metric_from_h5(phi, theta, h5_basename, vox_metric = 'cc')
 # Save the plot for lidr_sd
 png(paste0(
   'figs/maps/',
@@ -51,18 +54,18 @@ png(paste0(
   '_',
   plot,
   '_',
-  'voxrs_grid_p',
+  'voxrs_grid_lca_p',
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(cc_rast, main = paste0(strsplit(plot, "_")[[1]][1], ': LCA (-)'), col = viridis(100))
+plot(lca_rast, main = paste0(strsplit(plot, "_")[[1]][1], ': Leaf Contact Area (-)'), col = viridis(100))
 dev.off()
 
 ##  Select phi theta based on predicted trajectory angle and mean wind dir
 
 phi <- 55
 theta <- 188
-cc_rast <- rasterise_canopy_coverage_from_h5(phi, theta, h5_basename)
+lca_rast <- rasterise_vox_metric_from_h5(phi, theta, h5_basename, vox_metric = 'cc')
 # Save the plot for lidr_sd
 png(paste0(
   'figs/maps/',
@@ -70,91 +73,91 @@ png(paste0(
   '_',
   plot,
   '_',
-  'voxrs_grid_p',
+  'voxrs_grid_lca_p',
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(cc_rast, main = paste0(strsplit(plot, "_")[[1]][1], ': LCA (-)'), col = viridis(100))
+plot(lca_rast, main = paste0(strsplit(plot, "_")[[1]][1], ': Leaf Contact Area (-)'), col = viridis(100))
 dev.off()
 
 ## Select areas of the hemisphere 
 
 phi <- 0
 theta <- 0
-cc_rast <- rasterise_canopy_coverage_from_h5(phi, theta, h5_basename)
+lca_rast <- rasterise_vox_metric_from_h5(phi, theta, h5_basename, vox_metric = 'cc')
 png(paste0(
   'figs/maps/',
   vox_config_id,
   '_',
   plot,
   '_',
-  'voxrs_grid_p',
+  'voxrs_grid_lca_p',
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(cc_rast, main = 'Canopy Coverage (-)', col = viridis(100))
+plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100))
 dev.off()
 
 phi <- 35
 theta <- 0
-cc_rast <- rasterise_canopy_coverage_from_h5(phi, theta, h5_basename)
+lca_rast <- rasterise_vox_metric_from_h5(phi, theta, h5_basename, vox_metric = 'cc')
 png(paste0(
   'figs/maps/',
   vox_config_id,
   '_',
   plot,
   '_',
-  'voxrs_grid_p',
+  'voxrs_grid_lca_p',
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(cc_rast, main = 'Canopy Coverage (-)', col = viridis(100))
+plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100))
 dev.off()
 
 phi <- 45
 theta <- 0
-cc_rast <- rasterise_canopy_coverage_from_h5(phi, theta, h5_basename)
+lca_rast <- rasterise_vox_metric_from_h5(phi, theta, h5_basename, vox_metric = 'cc')
 png(paste0(
   'figs/maps/',
   vox_config_id,
   '_',
   plot,
   '_',
-  'voxrs_grid_p',
+  'voxrs_grid_lca_p',
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(cc_rast, main = 'Canopy Coverage (-)', col = viridis(100))
+plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100))
 dev.off()
 
 phi <- 60
 theta <- 0
-cc_rast <- rasterise_canopy_coverage_from_h5(phi, theta, h5_basename)
+lca_rast <- rasterise_vox_metric_from_h5(phi, theta, h5_basename, vox_metric = 'cc')
 png(paste0(
   'figs/maps/',
   vox_config_id,
   '_',
   plot,
   '_',
-  'voxrs_grid_p',
+  'voxrs_grid_lca_p',
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(cc_rast, main = 'Canopy Coverage (-)', col = viridis(100))
+plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100))
 dev.off()
 
 phi <- 80
 theta <- 0
-cc_rast <- rasterise_canopy_coverage_from_h5(phi, theta, h5_basename)
+lca_rast <- rasterise_vox_metric_from_h5(phi, theta, h5_basename, vox_metric = 'cc')
 png(paste0(
   'figs/maps/',
   vox_config_id,
   '_',
   plot,
   '_',
-  'voxrs_grid_p',
+  'voxrs_grid_lca_p',
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(cc_rast, main = 'Canopy Coverage (-)', col = viridis(100))
+plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100))
 dev.off()
