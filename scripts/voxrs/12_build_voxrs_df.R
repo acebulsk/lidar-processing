@@ -20,14 +20,15 @@ phi_theta_list <-
 
 
 h5_basefilename <- paste0(voxrs_outputs,
-                      event,
+                      folder,
                       '/voxrs/outputs/grid_resampling/',
                       'grid_resampled',
                       '_',
                       vox_config_id,
                       "_",
-                      plot)
-
+                      plot,
+		      "_s1_clip")
+#cat(h5_basefilename)
 # mcn_list <- lapply(phi_theta_list, 
 #                    compile_mcn,
 #                    h5_basefilename = h5_basefilename)
@@ -43,14 +44,16 @@ rm(mcn_list)
 gc() # free unused memory
 
 mcn_df_smry <- mcn_df |> 
-  group_by(phi_d) |> 
   pivot_longer(c(mcn, tau)) |>
+  group_by(phi_d, name) |>
   summarise(
+    event = event, 
     plot_name = plot,
     mean = mean(value),
     median = median(value),
     low_iqr = quantile(value, probs = 0.25),
-    upper_iqr = quantile(value, probs = 0.75)
+    upper_iqr = quantile(value, probs = 0.75),
+    sd = sd(value)	
   )
 
 rm(mcn_df)
@@ -69,4 +72,5 @@ saveRDS(mcn_df_smry,
           '.rds'
         ))
 
+rm(mcn_df_smry)
 gc() # free unused memory
