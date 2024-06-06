@@ -1,20 +1,21 @@
 #!/bin/bash
 #SBATCH --time=10:00:00
-#SBATCH --job-name=voxrs-step2
+#SBATCH --job-name=vs-s2-073-pwle
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=8G
 # for the special acces node hpc_c_giws_prio_clark
 # for regular GIWS compute note --account=hpc_c_giws_clark
 # for the large memory compute note --account=hpc_c_giws_mem_clark (100 TB and 80 cores)
-#SBATCH --account=hpc_c_giws_clark
+#SBATCH --account=hpc_c_giws_prio_clark
 #SBATCH --mail-user=zvd094@usask.ca
 #SBATCH --mail-type=ALL
 #SBATCH --error=/globalhome/zvd094/HPC/lidar-processing/scripts/voxrs/slurm-logs-step2/slurm-%A_%a.err
 #SBATCH --out=/globalhome/zvd094/HPC/lidar-processing/scripts/voxrs/slurm-logs-step2/slurm-%A_%a.out
 
-module load gcc/9.3.0
-module load geo-stack
+module load StdEnv/2023
+module load gcc/12.3
+module load geo-stack/2023a
 
 step=15 # 15 degress across 360
 offset=$SLURM_ARRAY_TASK_ID # get ID, should be [0,23] with a 15 deg step
