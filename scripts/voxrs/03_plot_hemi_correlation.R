@@ -52,8 +52,8 @@ p_tile <-
   geom_tile() +
   # geom_tile(height = 1,
   #           width = 0.1) +
-  scale_fill_viridis_c(name = expression(rho[s])) +
-  scale_color_viridis_c(name = expression(rho[s])) + 
+  scale_fill_viridis_c(name = expression(rho[s]), option = 'magma') +
+  scale_color_viridis_c(name = expression(rho[s]), option = 'magma') + 
   coord_radial(
     theta = "x",
     start = 0,
@@ -100,8 +100,8 @@ p_tile <-
   geom_tile() +
   # geom_tile(height = 1,
   #           width = 0.1) +
-  scale_fill_viridis_c(name = expression(rho[p])) +
-  scale_color_viridis_c(name = expression(rho[p])) + 
+  scale_fill_viridis_c(name = expression(rho[p]), option = 'magma') +
+  scale_color_viridis_c(name = expression(rho[p]), option = 'magma') + 
   coord_radial(
     theta = "x",
     start = 0,

@@ -58,7 +58,7 @@ png(paste0(
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(lca_rast, main = paste0(strsplit(plot, "_")[[1]][1], ': Leaf Contact Area (-)'), col = viridis(100))
+plot(lca_rast, main = paste0(strsplit(plot, "_")[[1]][1], ': Leaf Contact Area (-)'), col = viridis(100, option = 'magma'))
 dev.off()
 
 ##  Select phi theta based on predicted trajectory angle and mean wind dir
@@ -77,7 +77,7 @@ png(paste0(
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(lca_rast, main = paste0(strsplit(plot, "_")[[1]][1], ': Leaf Contact Area (-)'), col = viridis(100))
+plot(lca_rast, main = paste0(strsplit(plot, "_")[[1]][1], ': Leaf Contact Area (-)'), col = viridis(100, option = 'magma'))
 dev.off()
 
 ## Select areas of the hemisphere 
@@ -95,7 +95,7 @@ png(paste0(
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100))
+plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100, option = 'magma'))
 dev.off()
 
 phi <- 35
@@ -111,7 +111,7 @@ png(paste0(
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100))
+plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100, option = 'magma'))
 dev.off()
 
 phi <- 45
@@ -127,7 +127,7 @@ png(paste0(
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100))
+plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100, option = 'magma'))
 dev.off()
 
 phi <- 60
@@ -143,7 +143,7 @@ png(paste0(
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100))
+plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100, option = 'magma'))
 dev.off()
 
 phi <- 80
@@ -159,5 +159,5 @@ png(paste0(
   phi, '_t', theta,
   '.png'
 ), width = 1200, height = 800, res = 200)  # You can adjust width and height as needed
-plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100))
+plot(lca_rast, main = 'Leaf Contact Area (-)', col = viridis(100, option = 'magma'))
 dev.off()
