@@ -7,10 +7,11 @@ library(tidyverse)
 library(modelr)
 library(pbapply)
 
-# working_dir <- '/globalhome/zvd094/HPC/lidar-processing/'
-# data_dir <- '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/'
-working_dir <- '/home/alex/local-usask/analysis/lidar-processing/'
-data_dir <- '/media/alex/phd-data/local-usask/analysis/lidar-processing/'
+working_dir <- '/globalhome/zvd094/HPC/lidar-processing/'
+data_dir <- '/globalhome/zvd094/HPC/sym_link_gwf_prj/fortress/lidar-processing/'
+#working_dir <- '/home/alex/local-usask/analysis/lidar-processing/'
+#data_dir <- '/media/alex/phd-data/local-usask/analysis/lidar-processing/'
+source(paste0(working_dir, 'scripts/voxrs/voxrs_helper_fns.R'))
 
 n_cores <- 8
 
@@ -20,13 +21,11 @@ phi_to <- 90
 phi_by <- 1
 theta_from <- 0
 theta_to <- 359
-theta_by <- 5
+theta_by <- 2
 
 phi_theta_list <-
   build_phi_theta_pairs(phi_from, phi_to, phi_by, 
                         theta_from, theta_to, theta_by)
-
-source(paste0(working_dir, 'scripts/voxrs/voxrs_helper_fns.R'))
 
 plot_names <-
   c(#'FSR_NW',
