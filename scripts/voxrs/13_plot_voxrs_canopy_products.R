@@ -7,7 +7,11 @@ example_traj <- data.frame(
   traj_angle = traj_angle_deg(seq(0,10,0.001),0.9) |> round(1))
 
 mcn_df_paths <- list.files(paste0(data_dir, 'data/hemi_stats'), '*', full.names = T)
-mcn_df_paths <- mcn_df_paths[grep('phiby_2', mcn_df_paths)]
+
+file_select <- 's1_clip' # to fix problems in combined snow on / snow off point clouds we clipped to a buffer around the forest plots
+mcn_df_paths <- mcn_df_paths[grep(file_select, mcn_df_paths)]
+file_select <- 'phiby_2'
+mcn_df_paths <- mcn_df_paths[grep(file_select, mcn_df_paths)]
 
 mcn_df_out <- purrr::map_dfr(mcn_df_paths, readRDS) |> 
   mutate(traj_angle = phi_d) |> 
@@ -33,6 +37,8 @@ mcn_df_out_inc <- mcn_df_out |>
     lca_inc = lca - lca_nadir,
     lca_check = lca_nadir + lca_inc,
     lca_perc_inc = (lca_inc)/lca_nadir * 100)
+
+saveRDS(mcn_df_out_inc, 'data/hemi_stats/full_voxrs_not_filtered_to_swe_traj_angle_w_lca.rds')
 
 mcn_df_out_inc_long <- mcn_df_out_inc |> 
     rename(`Hydrometeor Trajectory Angle (°)` = phi_d,
