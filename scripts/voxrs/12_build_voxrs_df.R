@@ -12,23 +12,8 @@
 # h5path <- '/media/alex/phd-data/local-usask/analysis/lidar-processing/data/processed/23_072/voxrs/outputs/grid_resampling/grid_resampled_23_072_vox_len_0.25m__gridgen_FSR_NE_t0_14.h5'
 # h5readAttributes(file = h5path, name = 'p1_t10')
 
-phi_theta_list <-
-  build_phi_theta_pairs(phi_from, phi_to, phi_by, 
-                        theta_from, theta_to, theta_by)
-
 # data inputs ----
 
-
-h5_basefilename <- paste0(voxrs_outputs,
-                      folder,
-                      '/voxrs/outputs/grid_resampling/',
-                      'grid_resampled',
-                      '_',
-                      vox_config_id,
-                      "_",
-                      plot,
-		      "_s1_clip")
-#cat(h5_basefilename)
 # mcn_list <- lapply(phi_theta_list, 
 #                    compile_mcn,
 #                    h5_basefilename = h5_basefilename)
